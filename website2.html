@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Screen</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #000000;
+        }
+
+        body.light-mode {
+            background-color: #ffffff;
+        }
+        
+        /* HOME PAGE BACKGROUND */
+        body.home-active {
+            background-image: url('darkNatureBackgroundPicture.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        body.home-active.light-mode {
+            background-image: url('lightNatureBackgroundPicture.jpg');
+        }
+        
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 5px;
+            width: 100%;
+        }
+        
+        .tabs-container {
+            width: 57%;
+            position: relative;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 0;
+        }
+        
+        .tab {
+            background-color: #3a3a5c;
+            color: #d4af37;
+            padding: 8px 13px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            border-radius: 12px 12px 0 0;
+            border: 2px solid #222242;
+            border-bottom: none;
+            z-index: 1;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            background-color: #222242;
+            color: #d4af37;
+            z-index: 3;
+            border-color: #222242;
+        }
+        
+        .tab:not(.active) {
+            z-index: 1;
+        }
+        
+        .tab:hover:not(.active) {
+            background-color: #4a4a6c;
+        }
+        
+        .title-box {
+            background-color: #222242;
+            width: 57%;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 30px;
+            color: white;
+            font-size: 36px;
+            font-weight: 700;
+            position: relative;
+            z-index: 2;
+            border: 2px solid #222242;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        body.light-mode .theme-toggle {
+            filter: none;
+        }
+
+        .content-area {
+            width: 57%;
+            color: white;
+            margin-top: 30px;
+            padding: 0 30px;
+        }
+
+        .skills-description {
+            color: #fff;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .skills-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            letter-spacing: 2px;
+        }
+
+        .skill-item {
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .skill-item:hover {
+            transform: translateX(5px);
+        }
+
+        .skill-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            position: relative;
+            height: 30px;
+        }
+
+        .skill-name {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        .skill-percentage {
+            background-color: #4a5568;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            position: absolute;
+            top: -1px;
+            z-index: 10;
+            transform: translateX(-100%);
+        }
+
+        .skill-percentage::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 8px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #4a5568;
+        }
+
+        .skill-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #4a5568;
+            border-radius: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .skill-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #4299e1, #63b3ed);
+            border-radius: 0;
+            transition: width 1s ease-in-out;
+        }
+
+        .projects-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            margin-top: 15px;
+            padding-left: 20px;
+        }
+
+        .projects-list.expanded {
+            max-height: 500px;
+        }
+
+        .project-item {
+            color: #81c784;
+            font-size: 16px;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-left: 2px solid #4299e1;
+            padding-left: 10px;
+        }
+
+        .skill-description {
+            color: #a0aec0;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #2a2a4a;
+            border-radius: 6px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .manual-project-item {
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-left: 2px solid #4299e1;
+            padding-left: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .github-project-item {
+            color: #81c784;
+            font-size: 16px;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-left: 2px solid #9c27b0;
+            padding-left: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .github-project-item:hover {
+            color: #a5d6a7;
+            transform: translateX(3px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .contact-description {
+            color: #fff;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .form-description {
+            color: #fff;
+            font-size: 16px;
+            line-height: 1.6;
+            font-style: italic;
+        }
+
+        .contact-form {
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: #1e1040;
+            border: 3px solid #000;
+            border-radius: 0;
+            font-size: 16px;
+            color: #fff;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-input::placeholder {
+            color: #999;
+        }
+
+        .form-input:focus {
+            border-color: #2e1065;
+            background-color: #251248;
+        }
+
+        .form-textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .send-button {
+            background-color: #4c1d95;
+            color: white;
+            border: 3px solid #000;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 0;
+            float: right;
+            transition: all 0.3s ease;
+        }
+
+        .send-button:hover {
+            background-color: #3730a3;
+            transform: translateY(-2px);
+        }
+
+        .phone-message {
+            color: #fff;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            clear: both;
+            padding-top: 20px;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 40px;
+        }
+
+        .social-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            color: #4299e1;
+            transform: translateY(-5px);
+        }
+
+        .social-icon {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 10px;
+            filter: brightness(0) saturate(100%) invert(67%) sepia(8%) saturate(592%) hue-rotate(178deg) brightness(95%) contrast(88%);
+            transition: all 0.3s ease;
+        }
+
+        body.light-mode .social-icon {
+            filter: brightness(0) saturate(100%) invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%);
+        }
+
+        .social-link:hover .social-icon {
+            filter: brightness(0) saturate(100%) invert(46%) sepia(95%) saturate(3084%) hue-rotate(200deg) brightness(103%) contrast(98%);
+        }
+
+        body.light-mode .social-link:hover .social-icon {
+            filter: brightness(0) saturate(100%) invert(46%) sepia(95%) saturate(3084%) hue-rotate(200deg) brightness(103%) contrast(98%);
+        }
+
+        .social-label {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .about-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            margin-top: 20px;
+            margin-left: -30px;
+        }
+
+        .about-photo {
+            flex: 0 0 calc(33.33% - 15px);
+        }
+
+        .profile-image {
+            width: 100%;
+            height: auto;
+            border-radius: 0;
+        }
+
+        .about-text {
+            flex: 1;
+        }
+
+        .about-description {
+            color: #fff;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .contact-info {
+            border-top: 1px solid #444;
+            padding-top: 20px;
+        }
+
+        .contact-item {
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .contact-item a {
+            color: #4299e1;
+            text-decoration: none;
+        }
+
+        .contact-item a:hover {
+            text-decoration: underline;
+        }
+
+        .projects-description {
+            color: #fff;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .chart-container {
+            background-color: #222242;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 400px;
+        }
+
+        .loading-message {
+            color: #a0aec0;
+            text-align: center;
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .repo-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3a3a5a;
+            padding-bottom: 10px;
+        }
+
+        .repo-tab {
+            background-color: #3a3a5c;
+            color: #a0aec0;
+            padding: 10px 16px;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .repo-tab:hover {
+            background-color: #4a4a6c;
+            color: #fff;
+        }
+
+        .repo-tab.active {
+            background-color: #4299e1;
+            color: #fff;
+            border-color: #4299e1;
+        }
+
+        .project-chart-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #2a2a4a;
+            border-radius: 6px;
+        }
+
+        .project-details {
+            flex: 1;
+        }
+
+        .project-name {
+            color: #4299e1;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .project-description {
+            color: #a0aec0;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .project-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .project-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .project-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .project-link {
+            background-color: #4299e1;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .project-link:hover {
+            background-color: #3182ce;
+        }
+
+        .commit-summary {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #2a2a4a;
+            border-radius: 6px;
+        }
+
+        .commit-stat {
+            text-align: center;
+        }
+
+        .commit-stat-number {
+            color: #4299e1;
+            font-size: 24px;
+            font-weight: 700;
+            display: block;
+        }
+
+        .commit-stat-label {
+            color: #a0aec0;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        /* ONLY NEW STYLES FOR FLASK INTEGRATION */
+        .generate-btn {
+            background-color: #e74c3c;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .generate-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* HOME PAGE STYLES */
+        .home-hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .hero-name {
+            font-size: 84px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 7px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+
+        .hero-title {
+            font-size: 24px;
+            font-weight: 400;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            margin-bottom: 45px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .home-social-links {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-bottom: 60px;
+        }
+
+        .home-social-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .home-social-link:hover {
+            color: #4299e1;
+            transform: translateY(-5px);
+        }
+
+        .home-social-icon {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 10px;
+            filter: brightness(0) saturate(100%) invert(67%) sepia(8%) saturate(592%) hue-rotate(178deg) brightness(95%) contrast(88%);
+            transition: all 0.3s ease;
+        }
+
+        body.light-mode .home-social-icon {
+            filter: brightness(0) saturate(100%) invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%);
+        }
+
+        .home-social-link:hover .home-social-icon {
+            filter: brightness(0) saturate(100%) invert(46%) sepia(95%) saturate(3084%) hue-rotate(200deg) brightness(103%) contrast(98%);
+        }
+
+        body.light-mode .home-social-link:hover .home-social-icon {
+            filter: brightness(0) saturate(100%) invert(46%) sepia(95%) saturate(3084%) hue-rotate(200deg) brightness(103%) contrast(98%);
+        }
+
+        .home-social-label {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .home-bottom-message {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+        }
+
+        /* LIGHT MODE STYLES */
+        body.light-mode.home-active {
+            background-image: url('lightNatureBackgroundPicture.jpg');
+        }
+
+        body.light-mode .tab {
+            background-color: #e6e6fa;
+            color: #4a4a6c;
+            border-color: #d8bfd8;
+        }
+
+        body.light-mode .tab.active {
+            background-color: #d8bfd8;
+            color: #4a4a6c;
+            border-color: #d8bfd8;
+        }
+
+        body.light-mode .tab:hover:not(.active) {
+            background-color: #dda0dd;
+        }
+
+        body.light-mode .title-box {
+            background-color: #d8bfd8;
+            color: #000;
+            border-color: #d8bfd8;
+        }
+
+        body.light-mode .content-area {
+            color: #000;
+        }
+
+        body.light-mode .skills-description,
+        body.light-mode .about-description,
+        body.light-mode .projects-description,
+        body.light-mode .contact-description {
+            color: #000;
+        }
+
+        body.light-mode .section-title {
+            color: #000;
+        }
+
+        body.light-mode .skill-name {
+            color: #000;
+        }
+
+        body.light-mode .skill-percentage {
+            background-color: #9370db;
+            color: white;
+        }
+
+        body.light-mode .skill-percentage::after {
+            border-top-color: #9370db;
+        }
+
+        body.light-mode .skill-bar {
+            background-color: #e6e6fa;
+        }
+
+        body.light-mode .skill-description {
+            color: #333;
+            background-color: #f5f5f5;
+            border-left-color: #9370db;
+        }
+
+        body.light-mode .manual-project-item {
+            color: #000;
+            border-left-color: #9370db;
+        }
+
+        body.light-mode .github-project-item {
+            color: #4a4a6c;
+            border-left-color: #9370db;
+        }
+
+        body.light-mode .github-project-item:hover {
+            color: #333;
+        }
+
+        body.light-mode .form-input {
+            background-color: #f5f5f5;
+            border-color: #d8bfd8;
+            color: #000;
+        }
+
+        body.light-mode .form-input:focus {
+            border-color: #9370db;
+            background-color: #e6e6fa;
+        }
+
+        body.light-mode .form-label {
+            color: #000;
+        }
+
+        body.light-mode .form-description {
+            color: #000;
+        }
+
+        body.light-mode .send-button {
+            background-color: #9370db;
+            border-color: #333;
+        }
+
+        body.light-mode .send-button:hover {
+            background-color: #8a2be2;
+        }
+
+        body.light-mode .phone-message {
+            color: #000;
+        }
+
+        body.light-mode .social-link {
+            color: #000;
+        }
+
+        body.light-mode .social-link:hover {
+            color: #9370db;
+        }
+
+        body.light-mode .home-social-link {
+            color: #000;
+        }
+
+        body.light-mode .home-social-link:hover {
+            color: #9370db;
+        }
+
+        body.light-mode .contact-item {
+            color: #000;
+        }
+
+        body.light-mode .contact-item a {
+            color: #9370db;
+        }
+
+        body.light-mode .chart-container {
+            background-color: #f5f5f5;
+        }
+
+        body.light-mode .chart-title {
+            color: #000;
+        }
+
+        body.light-mode .loading-message {
+            color: #666;
+        }
+
+        body.light-mode .error-message {
+            color: #dc143c;
+        }
+
+        body.light-mode .repo-tab {
+            background-color: #e6e6fa;
+            color: #666;
+        }
+
+        body.light-mode .repo-tab:hover {
+            background-color: #dda0dd;
+            color: #000;
+        }
+
+        body.light-mode .repo-tab.active {
+            background-color: #9370db;
+            color: #fff;
+            border-color: #9370db;
+        }
+
+        body.light-mode .project-chart-info {
+            background-color: #f5f5f5;
+        }
+
+        body.light-mode .project-name {
+            color: #9370db;
+        }
+
+        body.light-mode .project-description {
+            color: #666;
+        }
+
+        body.light-mode .project-stats {
+            color: #666;
+        }
+
+        body.light-mode .project-link {
+            background-color: #9370db;
+        }
+
+        body.light-mode .project-link:hover {
+            background-color: #8a2be2;
+        }
+
+        body.light-mode .commit-summary {
+            background-color: #f5f5f5;
+        }
+
+        body.light-mode .commit-stat-number {
+            color: #9370db;
+        }
+
+        body.light-mode .commit-stat-label {
+            color: #666;
+        }
+
+        body.light-mode .projects-list {
+            background-color: transparent;
+        }
+
+        body.light-mode .hero-name,
+        body.light-mode .hero-title,
+        body.light-mode .home-bottom-message {
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="tabs-container">
+            <a href="#" class="tab" data-page="Home">Home</a>
+            <a href="#" class="tab" data-page="About Me">About Me</a>
+            <a href="#" class="tab" data-page="Skills">Skills</a>
+            <a href="#" class="tab" data-page="Projects">Projects</a>
+            <a href="#" class="tab" data-page="Contact Me">Contact Me</a>
+        </div>
+        <div class="title-box" id="pageTitle">
+            Home
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktc3VuIiB2aWV3Qm94PSIwIDAgMTYgMTYiPgogIDxwYXRoIGQ9Ik04IDExYTMgMyAwIDEgMSAwLTYgMyAzIDAgMCAxIDAgNm0wIDFhNCA0IDAgMSAwIDAtOCA0IDQgMCAwIDAgMCA4TTggMGEuNS41IDAgMCAxIC41LjV2MmEuNS41IDAgMCAxLTEgMHYtMkEuNS41IDAgMCAxIDggMG0wIDEzYS41LjUgMCAwIDEgLjUuNXYyYS41LjUgMCAwIDEtMSAwdi0yQS41LjUgMCAwIDEgOCAxM204LTVhLjUuNSAwIDAgMS0uNS41aC0yYS41LjUgMCAwIDEgMC0xaDJhLjUuNSAwIDAgMSAuNS41TTMgOGEuNS41IDAgMCAxLS41LjVoLTJhLjUuNSAwIDAgMSAwLTFoMkEuNS41IDAgMCAxIDMgOG0xMC42NTctNS42NTdhLjUuNSAwIDAgMSAwIC43MDdsLTEuNDE0IDEuNDE1YS41LjUgMCAxIDEtLjcwNy0uNzA4bDEuNDE0LTEuNDE0YS41LjUgMCAwIDEgLjcwNyAwbS05LjE5MyA5LjE5M2EuNS41IDAgMCAxIDAgLjcwN0wzLjA1IDEzLjY1N2EuNS41IDAgMCAxLS43MDctLjcwN2wxLjQxNC0xLjQxNGEuNS41IDAgMCAxIC43MDcgMG05LjE5MyAyLjEyMWEuNS41IDAgMCAxLS43MDcgMGwtMS40MTQtMS40MTRhLjUuNSAwIDAgMSAuNzA3LS43MDdsMS40MTQgMS40MTRhLjUuNSAwIDAgMSAwIC43MDdNNC40NjQgNC40NjVhLjUuNSAwIDAgMS0uNzA3IDBMMi4zNDMgMy4wNWEuNS41IDAgMSAxIC43MDctLjcwN2wxLjQxNCAxLjQxNGEuNS41IDAgMCAxIDAgLjcwOCIvPgo8L3N2Zz4=" alt="Switch to Light Mode" class="theme-toggle" id="themeToggle">
+        </div>
+        
+        <div class="content-area">
+            <div id="homeContent">
+                <div class="home-hero">
+                    <h1 class="hero-name">Adarsh Jayaram</h1>
+                    <p class="hero-title">Recent Computer Science Graduate<br>from Northeastern University</p>
+                    
+                    <div class="home-social-links">
+                        <a href="https://github.com/5jayarama" class="home-social-link" target="_blank">
+                            <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="home-social-icon">
+                            <span class="home-social-label">GitHub</span>
+                        </a>
+                        
+                        <a href="https://linkedin.com/in/adarshjayaram" class="home-social-link" target="_blank">
+                            <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="home-social-icon">
+                            <span class="home-social-label">LinkedIn</span>
+                        </a>
+                        
+                        <a href="mailto:adarshjedi@gmail.com" class="home-social-link">
+                            <img src="https://cdn-icons-png.flaticon.com/512/561/561127.png" alt="Email" class="home-social-icon">
+                            <span class="home-social-label">Email</span>
+                        </a>
+
+                        <a href="AdarshJayaramResume.pdf" class="home-social-link" target="_blank">
+                            <img src="https://cdn-icons-png.flaticon.com/512/3580/3580085.png" alt="Resume" class="home-social-icon">
+                            <span class="home-social-label">Resume</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="home-bottom-message">
+                    Check out my projects, skills, and about section to learn more!
+                </div>
+            </div>
+            
+            <div id="aboutContent" class="hidden">
+                <div class="about-container">
+                    <div class="about-photo">
+                        <img src="SelfPicture.jpg" alt="Adarsh Jayaram" class="profile-image">
+                    </div>
+                    <div class="about-text">
+                        <div class="about-description">
+                            Hi, my name is Adarsh Jayaram and I am a recent graduate from Northeastern University with a B.S. in Computer Science. I am currently searching for opportunities to leverage my freshly built software skills to solve real-world problems and to gain real world hands-on experience by working in the professional environment.
+                            
+                            <br><br>During my time at Northeastern, I aquired noteworthy skills through various projects, coursework, and an internship at GhangorCloud. By leveraging my comprehensive foundation in the field, I hope devliver meaningful results in the workplace. While My expertise is mainly in areas such as networks, systems, and full stack development, I am open to other opportunities as well to expand my repertoire.
+                            
+                            <br><br>I am currrently looking for opportunities where I can contribute to impactful products so that I can continue growing as a developer. I am excited to work and learn alongside other creative and intelligent developers during this process. I prefer to work in-person in small teams; I find myself more willing and capable of absorbing knowledge under this environment, which boosts my long term contribution.
+                            
+                            <br><br>I have an interest in emerging scientific and technological developments even outside coding. I enjoy spending some of my free time reading about the latest technologies and general news on Wall Street Journal or other interesting sites. I am intrigued by the impact of these technologies on both the lives of everyday people and on the general economy.
+                        </div>
+                        
+                        <div class="contact-info">
+                            <div class="contact-item">
+                                <strong>Full Name:</strong> Adarsh Jayaram
+                            </div>
+                            <div class="contact-item">
+                                <strong>Email:</strong> adarshjedi@gmail.com
+                            </div>
+                            <div class="contact-item">
+                                <strong>Resume:</strong> <a href="AdarshJayaramResume.pdf" target="_blank">Download Resume</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="skillsContent" class="hidden">
+                <div class="skills-description">
+                    The majority of my expertise - epecially recently - is in networks, systems, and full stack development. I did mostly Java projects in the earlier half of my college years and shifted into python programming for the later half, using it for both schoolwork and for the personal projects which I have developed. I also learned full stack development from contributing to the website in the Northeastern Electric Racing Club and some project based coursework. 
+                    
+                    <br><br>Take the skill meters with a grain of salt, it's more of a measure of how much time I spent with each one. I put them lower because I am a junior developer and I feel that I have a lot to learn. 
+                    
+                    <br><br>Feel free to click on the skills to see the description that I wrote for each one. Project data under skills is fetched from github and then organized by main language, or added manually if not on github.
+                </div>
+                
+                <div class="skills-section">
+                    <div class="section-title">LANGUAGES</div>
+                    
+                    <div class="skill-item" data-skill="python">
+                        <div class="skill-header">
+                            <div class="skill-name">PYTHON</div>
+                            <div class="skill-percentage" style="left: 65%;">65%</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 65%"></div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I developed my Python expertise through academic and personal projects on various topics from data analysis to cybersecurity. When I make a project I usually choose to do it in python, because python has so many tools and libaries which make coding much easier and more efficient. I have plenty of python projects, so feel free to look into them - I think I coded them quite well. Many fields nowadays are dominated by python, including data anaylsis, machine learning, and cybersecurity. </div>
+                            <div class="github-projects-container" data-language="Python"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-item" data-skill="typescript">
+                        <div class="skill-header">
+                            <div class="skill-name">TYPESCRIPT/JAVASCRIPT</div>
+                            <div class="skill-percentage" style="left: 55%;">55%</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 55%"></div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I learned typescript during two project based classes and during my time at the Northeastern Electric Racing club. Both of the projects were full stack, meaning I managed a database backend in tandem with the typescript frontend. In the club I did only tyepscript and others managed the backend.</div>
+                            <div class="github-projects-container" data-language="JavaScript"></div>
+                            <div class="github-projects-container" data-language="TypeScript"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-item" data-skill="java">
+                        <div class="skill-header">
+                            <div class="skill-name">JAVA</div>
+                            <div class="skill-percentage" style="left: 50%;">50%</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 50%"></div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">Java was one of my foundational programming languages: it was the first major language that I learned during college. I studied Java knowledge under the context of data structures, algorithms, object oriented programming, and building elegant backend systems. The marble solitaire and the image processor are the biggest projects that I made for Java.</div>
+                            <div class="github-projects-container" data-language="Java"></div>
+                        </div>
+                    </div>
+
+                    <div class="skill-item" data-skill="mysql">
+                        <div class="skill-header">
+                            <div class="skill-name">MySQL</div>
+                            <div class="skill-percentage" style="left: 35%;">35%</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 35%"></div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I have used MySQL in three instances: During database management for testing during my internship at GhangorCloud, during an introductory cybersecurity class where I learned how to secure data in SQL databases, and one where I did a full stack project where the data was stored in a MySQL backend. I understand the basics of the schemas along with making and securing the databases.</div>
+                            <div class="github-projects-container" data-language="SQL"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-item" data-skill="cpp">
+                        <div class="skill-header">
+                            <div class="skill-name">C++</div>
+                            <div class="skill-percentage" style="left: 30%;">30%</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 30%"></div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I learned C++ during two of my college classes where I worked on backend related projects. As a lower level language C++ has the programmer manually manage more computational resources, such as memory allocation, while python and java manage the automatically. It's a trade-off for more performance, but as a junior programmer I almost always prefer to do my projects - both personal and for school - in python. I can finish the projects faster, debug them faster, and then make some adjustments for more performance. In some industries the extra hassle of a lower level language is worth it, because performance is pivotal, so I am open learn more about C++. But as of now that is not were my expertise lies.  </div>
+                            <div class="manual-project-item" data-project="predator-prey">• Predator-Prey Simulation using ncurses library</div>
+                            <div class="manual-project-item" data-project="snake-game">• Snake Game using linked lists</div>
+                            <div class="github-projects-container" data-language="C++"></div>
+                        </div>
+                    </div>
+
+                    <div class="skill-item" data-skill="kotlin">
+                        <div class="skill-header">
+                            <div class="skill-name">KOTLIN</div>
+                            <div class="skill-percentage" style="left: 30%;">30%</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 30%"></div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I used Kotlin during my GhangorCloud internship where I modified a keycloak extension to fit company needs. It is a bit similar to java - both are object oriented languages - so I was able to grasp the extra gimmicks of kotlin enough to complete this company task.</div>
+                            <div class="manual-project-item" data-project="keycloak-extension">• Modified Keycloak Extension</div>
+                            <div class="github-projects-container" data-language="Kotlin"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="skills-section">
+                    <div class="section-title">PLATFORMS & TOOLS</div>
+                    
+                    <div class="skill-item" data-skill="git">
+                        <div class="skill-header">
+                            <div class="skill-name">GIT</div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">Git has been a crucial part of my development workflow since my second year at college. I have used github for various class projects - both partnered and solo. I have also been exposed to Github in a larger setting in the NER club, where I have done pull requests and formal code merging. Finally I have used Github to browse other projects. For instance, the keycloak extension that I made during my internship was a modified version of an open source project on github.</div>
+                            <div class="github-projects-container" data-language="Git"></div>
+                        </div>
+                    </div>
+
+                    <div class="skill-item" data-skill="vscode">
+                        <div class="skill-header">
+                            <div class="skill-name">VS CODE</div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">VS Code became my primary and favorite IDE due to its convenience and ease of use. Its vast library of extensions and compatibility with any language makes it both powerful and reliable. Every developer has their own preferred plaform that they feel allows them to write better code, and I prefer this one before I migrate it to the official plaform.</div>
+                            <div class="github-projects-container" data-language="VS Code"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="skill-item" data-skill="docker">
+                        <div class="skill-header">
+                            <div class="skill-name">DOCKER</div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I used docker in my internship at GhangorCloud, at the NER club, and during two of my classes. It is a great tool - containerization is invaluable for software deployment - and since I have used it I am not mostly capable of navigating the finnicky aspects of docker.</div>
+                            <div class="github-projects-container" data-language="Dockerfile"></div>
+                        </div>
+                    </div>
+
+                    <div class="skill-item" data-skill="vim">
+                        <div class="skill-header">
+                            <div class="skill-name">VIM/BASH</div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I have used text editors and terminals in many of my more systems related coursework at my university. I learned the basic scripting commands so that I can effectively traverse and search files and file contents within the terminal environment.</div>
+                            <div class="github-projects-container" data-language="Vim script"></div>
+                        </div>
+                    </div>
+
+                    <div class="skill-item" data-skill="linux">
+                        <div class="skill-header">
+                            <div class="skill-name">UBUNTU & RED HAT LINUX</div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I have used Ubuntu Linux for quite a few backend heavy coursework and during my internship at GhangorCloud. I ran Ubuntu on a virtual machine for my classes - where I compeleted various assignments and projects - and I used a Linux computer at my internship. I have also touched on Red Hat Linux for some setups, package installs, and other basic tasks</div>
+                            <div class="github-projects-container" data-language="Shell"></div>
+                        </div>
+                    </div>
+
+                    <div class="skill-item" data-skill="mongodb">
+                        <div class="skill-header">
+                            <div class="skill-name">MONGODB</div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">I created a website for a class using a schema based backend, and then I converted it to use MongoDB instead. I found it easy to use after I learned how to set it up, as all that needs to be done is insert the data the right way.</div>
+                            <div class="github-projects-container" data-language="MongoDB"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="projectsContent" class="hidden">
+                <div class="projects-description">
+                    Here are my projects as listed on my github along with their descriptions and commit graph. The commit graph was made using Python's seaborn Lowess smoothening, which runs on a backend server via Render.<br><br>To see each project listed under the respective skill check out the skills page, and for more information on the projects check out my github (link in contacts or home page).
+                </div>
+                
+                <div class="chart-container">
+                    <div id="repoTabsContainer">
+                        <div class="loading-message">Loading repositories...</div>
+                    </div>
+                    
+                    <div id="selectedProjectInfo" style="display: none;">
+                        <div class="project-chart-info">
+                            <div class="project-details">
+                                <div id="projectName" class="project-name"></div>
+                                <div id="projectDescription" class="project-description"></div>
+                                <div id="projectStats" class="project-stats"></div>
+                            </div>
+                            <div class="project-links">
+                                <a id="projectGithubLink" href="#" target="_blank" class="project-link">View on GitHub</a>
+                                <button class="generate-btn" onclick="generateSingleGraph()" style="border: none; cursor: pointer;">📊 Generate Python Graph</button>
+                            </div>
+                        </div>
+                        
+                        <div class="commit-summary">
+                            <div class="commit-stat">
+                                <span id="totalCommits" class="commit-stat-number">0</span>
+                                <span class="commit-stat-label">Total Commits</span>
+                            </div>
+                            <div class="commit-stat">
+                                <span id="activeDays" class="commit-stat-number">0</span>
+                                <span class="commit-stat-label">Active Days</span>
+                            </div>
+                            <div class="commit-stat">
+                                <span id="avgCommitsPerDay" class="commit-stat-number">0</span>
+                                <span class="commit-stat-label">Avg per Day</span>
+                            </div>
+                            <div class="commit-stat">
+                                <span id="lastCommitDate" class="commit-stat-number">--</span>
+                                <span class="commit-stat-label">Last Commit</span>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-title">Python-Generated Commit Graph with LOWESS Smoothing</div>
+                        <div id="chartArea">
+                            <div class="loading-message">Select a project to view its commit timeline...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="contactContent" class="hidden">
+                <div class="contact-description">
+                    Feel free to connect with me on LinkedIn if you know me or want to get acquainted.
+                </div>
+                
+                <form class="contact-form">
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-input" placeholder="Name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" placeholder="Email Address" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-input form-textarea" placeholder="Message" required></textarea>
+                    </div>
+                    
+                    <div class="form-description">
+                        These fields allow you to send your contact information into my spreadsheet.
+                    </div>
+                    
+                    <button type="submit" class="send-button">Send</button>
+                </form>
+                
+                <div class="phone-message">
+                    For fastest response time, just text or call my phone number! My number is 510-953-2104.
+                </div>
+                
+                <div class="social-links">
+                    <a href="https://github.com/5jayarama" class="social-link" target="_blank">
+                        <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" class="social-icon">
+                        <span class="social-label">GitHub</span>
+                    </a>
+                    
+                    <a href="https://linkedin.com/in/adarshjayaram" class="social-link" target="_blank">
+                        <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="social-icon">
+                        <span class="social-label">LinkedIn</span>
+                    </a>
+                    
+                    <a href="mailto:adarshjedi@gmail.com" class="social-link">
+                        <img src="https://cdn-icons-png.flaticon.com/512/561/561127.png" alt="Email" class="social-icon">
+                        <span class="social-label">Email</span>
+                    </a>
+
+                    <a href="AdarshJayaramResume.pdf" class="social-link" target="_blank">
+                        <img src="https://cdn-icons-png.flaticon.com/512/3580/3580085.png" alt="Resume" class="social-icon">
+                        <span class="social-label">Resume</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set initial active tab and background
+        document.querySelector('.tab[data-page="Home"]').classList.add('active');
+        document.body.classList.add('home-active');
+        
+        // Add click handlers to all tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Update the main box title
+                const pageName = this.getAttribute('data-page');
+                const currentTheme = document.body.classList.contains('light-mode');
+                const iconSrc = currentTheme ? 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktc3VuLWZpbGwiIHZpZXdCb3g9IjAgMCAxNiAxNiI+CiAgPHBhdGggZD0iTTggMTJhNCA0IDAgMSAwIDAtOCA0IDQgMCAwIDAgMCA4TTggMGEuNS41IDAgMCAxIC41LjV2MmEuNS41IDAgMCAxLTEgMHYtMkEuNS41IDAgMCAxIDggMG0wIDEzYS41LjUgMCAwIDEgLjUuNXYyYS41LjUgMCAwIDEtMSAwdi0yQS41LjUgMCAwIDEgOCAxM204LTVhLjUuNSAwIDAgMS0uNS41aC0yYS41LjUgMCAwIDEgMC0xaDJhLjUuNSAwIDAgMSAuNS41TTMgOGEuNS41IDAgMCAxLS41LjVoLTJhLjUuNSAwIDAgMSAwLTFoMkEuNS41IDAgMCAxIDMgOG0xMC42NTctNS42NTdhLjUuNSAwIDAgMSAwIC43MDdsLTEuNDE0IDEuNDE1YS41LjUgMCAxIDEtLjcwNy0uNzA4bDEuNDE0LTEuNDE0YS41LjUgMCAwIDEgLjcwNyAwbS05LjE5MyA5LjE5M2EuNS41IDAgMCAxIDAgLjcwN0wzLjA1IDEzLjY1N2EuNS41IDAgMCAxLS43MDctLjcwN2wxLjQxNC0xLjQxNGEuNS41IDAgMCAxIC43MDcgMG05LjE5MyAyLjEyMWEuNS41IDAgMCAxLS43MDcgMGwtMS40MTQtMS40MTRhLjUuNSAwIDAgMSAuNzA3LS43MDdsMS40MTQgMS40MTRhLjUuNSAwIDAgMSAwIC43MDdNNC40NjQgNC40NjVhLjUuNSAwIDAgMS0uNzA3IDBMMi4zNDMgMy4wNWEuNS41IDAgMSAxIC43MDctLjcwN2wxLjQxNCAxLjQxNGEuNS41IDAgMCAxIDAgLjcwOCIvPgo8L3N2Zz4=' : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktc3VuIiB2aWV3Qm94PSIwIDAgMTYgMTYiPgogIDxwYXRoIGQ9Ik04IDExYTMgMyAwIDEgMSAwLTYgMyAzIDAgMCAxIDAgNm0wIDFhNCA0IDAgMSAwIDAtOCA0IDQgMCAwIDAgMCA4TTggMGEuNS41IDAgMCAxIC41LjV2MmEuNS41IDAgMCAxLTEgMHYtMkEuNS41IDAgMCAxIDggMG0wIDEzYS41LjUgMCAwIDEgLjUuNXYyYS41LjUgMCAwIDEtMSAwdi0yQS41LjUgMCAwIDEgOCAxM204LTVhLjUuNSAwIDAgMS0uNS41aC0yYS41LjUgMCAwIDEgMC0xaDJhLjUuNSAwIDAgMSAuNS41TTMgOGEuNS41IDAgMCAxLS41LjVoLTJhLjUuNSAwIDAgMSAwLTFoMkEuNS41IDAgMCAxIDMgOG0xMC42NTctNS42NTdhLjUuNSAwIDAgMSAwIC43MDdsLTEuNDE0IDEuNDE1YS41LjUgMCAxIDEtLjcwNy0uNzA4bDEuNDE0LTEuNDE0YS41LjUgMCAwIDEgLjcwNyAwbS05LjE5MyA5LjE5M2EuNS41IDAgMCAxIDAgLjcwN0wzLjA1IDEzLjY1N2EuNS41IDAgMCAxLS43MDctLjcwN2wxLjQxNC0xLjQxNGEuNS41IDAgMCAxIC43MDcgMG05LjE5MyAyLjEyMWEuNS41IDAgMCAxLS43MDcgMGwtMS40MTQtMS40MTRhLjUuNSAwIDAgMSAuNzA3LS43MDdsMS40MTQgMS40MTRhLjUuNSAwIDAgMSAwIC43MDdNNC40NjQgNC40NjVhLjUuNSAwIDAgMS0uNzA3IDBMMi4zNDMgMy4wNWEuNS41IDAgMSAxIC43MDctLjcwN2wxLjQxNCAxLjQxNGEuNS41IDAgMCAxIDAgLjcwOCIvPgo8L3N2Zz4=';
+                const altText = currentTheme ? 'Switch to Dark Mode' : 'Switch to Light Mode';
+                document.getElementById('pageTitle').innerHTML = pageName + `<img src="${iconSrc}" alt="${altText}" class="theme-toggle" id="themeToggle">`;
+                
+                // Re-attach theme toggle event listener
+                document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+                
+                // Manage background image for home page only
+                if (pageName === 'Home') {
+                    document.body.classList.add('home-active');
+                } else {
+                    document.body.classList.remove('home-active');
+                }
+                
+                // Show/hide content based on active tab
+                const skillsContent = document.getElementById('skillsContent');
+                const contactContent = document.getElementById('contactContent');
+                const aboutContent = document.getElementById('aboutContent');
+                const projectsContent = document.getElementById('projectsContent');
+                
+                // Hide all content first
+                skillsContent.classList.add('hidden');
+                contactContent.classList.add('hidden');
+                aboutContent.classList.add('hidden');
+                projectsContent.classList.add('hidden');
+                document.getElementById('homeContent').classList.add('hidden');
+                
+                // Show relevant content
+                if (pageName === 'Skills') {
+                    skillsContent.classList.remove('hidden');
+                } else if (pageName === 'Contact Me') {
+                    contactContent.classList.remove('hidden');
+                } else if (pageName === 'About Me') {
+                    aboutContent.classList.remove('hidden');
+                } else if (pageName === 'Projects') {
+                    projectsContent.classList.remove('hidden');
+                    // Load Projects UI if not already loaded
+                    if (!window.projectsUILoaded) {
+                        loadGitHubData();
+                        window.projectsUILoaded = true;
+                    }
+                } else if (pageName === 'Home') {
+                    document.getElementById('homeContent').classList.remove('hidden');
+                }
+            });
+        });
+        
+        // Add click handlers for skills to show/hide projects
+        document.querySelectorAll('.skill-item').forEach(skill => {
+            skill.addEventListener('click', function() {
+                const projectsList = this.querySelector('.projects-list');
+                projectsList.classList.toggle('expanded');
+                
+                // Populate GitHub projects if not already done
+                if (projectsList.classList.contains('expanded') && !projectsList.dataset.populated) {
+                    populateGitHubProjects(projectsList);
+                    projectsList.dataset.populated = 'true';
+                }
+            });
+        });
+
+        // Add click handlers for manual projects
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('github-project-item')) {
+                const repoUrl = e.target.dataset.url;
+                if (repoUrl) {
+                    window.open(repoUrl, '_blank');
+                }
+            }
+        });
+
+        // Function to populate GitHub projects in skills sections - UPDATED TO USE EXISTING DATA
+        function populateGitHubProjects(projectsList) {
+            console.log('Populating GitHub projects...');
+            console.log('repositoriesData length:', repositoriesData.length);
+            
+            const githubContainers = projectsList.querySelectorAll('.github-projects-container');
+            console.log('Found containers:', githubContainers.length);
+            
+            githubContainers.forEach(container => {
+                const language = container.dataset.language;
+                console.log('Looking for language:', language);
+                
+                // Clear existing projects first
+                container.innerHTML = '';
+                
+                // Use the same repositoriesData array that's already populated
+                if (repositoriesData && repositoriesData.length > 0) {
+                    const matchingRepos = repositoriesData.filter(repo => {
+                        console.log('Checking repo:', repo.name, 'language:', repo.language);
+                        return repo.language === language && repo.language !== null;
+                    });
+                    
+                    console.log('Matching repos for', language, ':', matchingRepos.length);
+                    
+                    if (matchingRepos.length > 0) {
+                        matchingRepos.forEach(repo => {
+                            const projectElement = document.createElement('div');
+                            projectElement.className = 'github-project-item';
+                            projectElement.dataset.url = repo.html_url;
+                            projectElement.textContent = `• ${repo.name}`;
+                            container.appendChild(projectElement);
+                            console.log('Added project:', repo.name, 'to', language);
+                        });
+                    } else {
+                        console.log('No matching repos found for', language);
+                    }
+                } else {
+                    console.log('No repositories data available, length:', repositoriesData.length);
+                }
+            });
+        }
+
+        // GitHub Data Management - MODIFIED FOR FLASK INTEGRATION
+        const GITHUB_USERNAME = '5jayarama';
+        const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+        const FLASK_SERVER = 'http://localhost:5000'; // Flask server URL
+        let repositoriesData = [];
+        let selectedRepo = null;
+
+        // Function to load GitHub data only (no UI) - for startup
+        async function loadGitHubDataOnly() {
+            try {
+                // Check for cached data first
+                const cachedData = localStorage.getItem('githubProjectData');
+                const lastUpdate = localStorage.getItem('githubDataTimestamp');
+                const now = Date.now();
+
+                if (cachedData && lastUpdate && (now - parseInt(lastUpdate)) < CACHE_DURATION) {
+                    const data = JSON.parse(cachedData);
+                    repositoriesData = data.repositories;
+                    return;
+                }
+
+                // Fetch fresh data from Flask server
+                const response = await fetch(`${FLASK_SERVER}/api/repositories`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    repositoriesData = data.repositories;
+                    
+                    // Cache the data
+                    const dataToCache = { repositories: repositoriesData };
+                    localStorage.setItem('githubProjectData', JSON.stringify(dataToCache));
+                    localStorage.setItem('githubDataTimestamp', Date.now().toString());
+                } else {
+                    console.error('Failed to fetch repositories:', data.message);
+                }
+
+            } catch (error) {
+                console.error('Error loading GitHub data:', error);
+            }
+        }
+
+        async function loadGitHubData() {
+            try {
+                // Check for cached data first
+                const cachedData = localStorage.getItem('githubProjectData');
+                const lastUpdate = localStorage.getItem('githubDataTimestamp');
+                const now = Date.now();
+
+                if (cachedData && lastUpdate && (now - parseInt(lastUpdate)) < CACHE_DURATION) {
+                    const data = JSON.parse(cachedData);
+                    repositoriesData = data.repositories;
+                    displayRepositoryTabs(repositoriesData);
+                    return;
+                }
+
+                // Fetch fresh data from Flask server
+                document.getElementById('repoTabsContainer').innerHTML = '<div class="loading-message">Fetching latest repository data...</div>';
+
+                const response = await fetch(`${FLASK_SERVER}/api/repositories`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    repositoriesData = data.repositories;
+                    
+                    // Cache the data
+                    const dataToCache = { repositories: repositoriesData };
+                    localStorage.setItem('githubProjectData', JSON.stringify(dataToCache));
+                    localStorage.setItem('githubDataTimestamp', Date.now().toString());
+                    
+                    displayRepositoryTabs(repositoriesData);
+                } else {
+                    throw new Error(data.message || 'Failed to fetch repositories');
+                }
+
+            } catch (error) {
+                console.error('Error loading GitHub data:', error);
+                document.getElementById('repoTabsContainer').innerHTML = 
+                    '<div class="error-message">Failed to load repository data. Make sure Flask server is running on localhost:5000.</div>';
+            }
+        }
+
+        function displayRepositoryTabs(repositories) {
+            const container = document.getElementById('repoTabsContainer');
+            
+            if (repositories.length === 0) {
+                container.innerHTML = '<div class="error-message">No repositories found.</div>';
+                return;
+            }
+
+            const tabsHTML = repositories.map((repo, index) => 
+                `<div class="repo-tab" data-repo-index="${index}">${repo.name}</div>`
+            ).join('');
+
+            container.innerHTML = `<div class="repo-tabs">${tabsHTML}</div>`;
+
+            // Add click handlers to tabs
+            document.querySelectorAll('.repo-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const repoIndex = parseInt(this.getAttribute('data-repo-index'));
+                    selectRepository(repoIndex);
+                });
+            });
+
+            // Auto-select first repository if none selected
+            if (repositories.length > 0) {
+                selectRepository(0);
+            }
+        }
+
+        function selectRepository(repoIndex) {
+            const repo = repositoriesData[repoIndex];
+            if (!repo) return;
+
+            selectedRepo = repo;
+
+            // Update tab active state
+            document.querySelectorAll('.repo-tab').forEach((tab, index) => {
+                tab.classList.toggle('active', index === repoIndex);
+            });
+
+            // Show project info section
+            document.getElementById('selectedProjectInfo').style.display = 'block';
+
+            // Update project details
+            document.getElementById('projectName').textContent = repo.name;
+            document.getElementById('projectDescription').textContent = repo.description || 'No description available';
+            document.getElementById('projectGithubLink').href = repo.html_url;
+
+            // Update project stats
+            const statsHTML = [
+                `<div class="project-stat"><span>⭐</span><span>${repo.stars}</span></div>`,
+                `<div class="project-stat"><span>🍴</span><span>${repo.forks}</span></div>`,
+                repo.language ? `<div class="project-stat"><span>📝</span><span>${repo.language}</span></div>` : '',
+                `<div class="project-stat"><span>📅</span><span>${new Date(repo.updated_at).toLocaleDateString()}</span></div>`
+            ].filter(Boolean).join('');
+            
+            document.getElementById('projectStats').innerHTML = statsHTML;
+
+            // Update commit summary with basic info
+            updateCommitSummary(repo);
+            
+            // Automatically generate graph when project is selected
+            generateSingleGraph();
+        }
+
+        function updateCommitSummary(repo) {
+            document.getElementById('totalCommits').textContent = repo.commit_count || 'Unknown';
+            document.getElementById('activeDays').textContent = 'Click';
+            document.getElementById('avgCommitsPerDay').textContent = 'Generate';
+            document.getElementById('lastCommitDate').textContent = new Date(repo.updated_at).toLocaleDateString();
+        }
+
+        function updateChartArea() {
+            const chartArea = document.getElementById('chartArea');
+            chartArea.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #a0aec0;">
+                    <h3 style="color: #4299e1; margin-bottom: 20px;">📊 Ready for Python Analysis</h3>
+                    <p style="margin-bottom: 20px;">
+                        Repository: <strong style="color: #fff;">${selectedRepo.name}</strong><br>
+                        Click "Generate Python Graph" to create seaborn LOWESS visualization.
+                    </p>
+                    <p style="font-size: 14px; color: #718096;">
+                        This will use your Flask server to generate professional commit analysis.
+                    </p>
+                </div>
+            `;
+        }
+
+        // Flask integration function - MODIFIED FOR CONDITIONAL MESSAGE
+        function generateSingleGraph() {
+            if (!selectedRepo) {
+                alert('Please select a repository first.');
+                return;
+            }
+            
+            // Call Flask server to generate graph
+            const chartArea = document.getElementById('chartArea');
+            chartArea.innerHTML = '<div class="loading-message">🔄 Generating Python LOWESS graph...</div>';
+            
+            fetch(`${FLASK_SERVER}/api/generate_graph/${selectedRepo.name}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update commit summary with real stats
+                        document.getElementById('totalCommits').textContent = data.stats.total_commits;
+                        document.getElementById('activeDays').textContent = data.stats.active_days;
+                        document.getElementById('avgCommitsPerDay').textContent = data.stats.avg_commits_per_day;
+                        
+                        // Determine the message based on timeline length
+                        const timelineDays = data.stats.timeline_days;
+                        const message = timelineDays < 5 
+                            ? 'No LOWESS curve available for projects with very little history'
+                            : '📈 Generated using Python seaborn with LOWESS smoothing';
+                        
+                        // Display the generated graph
+                        chartArea.innerHTML = `
+                            <div style="text-align: center;">
+                                <img src="${FLASK_SERVER}${data.image_url}" 
+                                     style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #4299e1;">
+                                <div style="margin-top: 15px; color: #a0aec0;">
+                                    <p>${message}</p>
+                                    <p>Total: ${data.stats.total_commits} commits | Active: ${data.stats.active_days} days | Timeline: ${data.stats.timeline_days} days</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        chartArea.innerHTML = `<div class="error-message">❌ ${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error generating graph:', error);
+                    chartArea.innerHTML = `<div class="error-message">❌ Server error: Make sure Flask server is running on localhost:5000</div>`;
+                });
+        }
+
+        // Set up hourly updates
+        setInterval(() => {
+            if (window.githubDataLoaded) {
+                loadGitHubData();
+            }
+        }, CACHE_DURATION);
+
+        // Load GitHub data immediately when website opens (after all variables are defined)
+        loadGitHubDataOnly();
+        window.githubDataLoaded = true;
+
+        // Theme toggle functionality
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            
+            // Update the icon and alt text based on current theme
+            const themeToggle = document.getElementById('themeToggle');
+            const isLightMode = document.body.classList.contains('light-mode');
+            
+            if (isLightMode) {
+                themeToggle.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktc3VuLWZpbGwiIHZpZXdCb3g9IjAgMCAxNiAxNiI+CiAgPHBhdGggZD0iTTggMTJhNCA0IDAgMSAwIDAtOCA0IDQgMCAwIDAgMCA4TTggMGEuNS41IDAgMCAxIC41LjV2MmEuNS41IDAgMCAxLTEgMHYtMkEuNS41IDAgMCAxIDggMG0wIDEzYS41LjUgMCAwIDEgLjUuNXYyYS41LjUgMCAwIDEtMSAwdi0yQS41LjUgMCAwIDEgOCAxM204LTVhLjUuNSAwIDAgMS0uNS41aC0yYS41LjUgMCAwIDEgMC0xaDJhLjUuNSAwIDAgMSAuNS41TTMgOGEuNS41IDAgMCAxLS41LjVoLTJhLjUuNSAwIDAgMSAwLTFoMkEuNS41IDAgMCAxIDMgOG0xMC42NTctNS42NTdhLjUuNSAwIDAgMSAwIC43MDdsLTEuNDE0IDEuNDE1YS41LjUgMCAxIDEtLjcwNy0uNzA4bDEuNDE0LTEuNDE0YS41LjUgMCAwIDEgLjcwNyAwbS05LjE5MyA5LjE5M2EuNS41IDAgMCAxIDAgLjcwN0wzLjA1IDEzLjY1N2EuNS41IDAgMCAxLS43MDctLjcwN2wxLjQxNC0xLjQxNGEuNS41IDAgMCAxIC43MDcgMG05LjE5MyAyLjEyMWEuNS41IDAgMCAxLS43MDcgMGwtMS40MTQtMS40MTRhLjUuNSAwIDAgMSAuNzA3LS43MDdsMS40MTQgMS40MTRhLjUuNSAwIDAgMSAwIC43MDdNNC40NjQgNC40NjVhLjUuNSAwIDAgMS0uNzA3IDBMMi4zNDMgMy4wNWEuNS41IDAgMSAxIC43MDctLjcwN2wxLjQxNCAxLjQxNGEuNS41IDAgMCAxIDAgLjcwOCIvPgo8L3N2Zz4=';
+                themeToggle.alt = 'Switch to Dark Mode';
+            } else {
+                themeToggle.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktc3VuIiB2aWV3Qm94PSIwIDAgMTYgMTYiPgogIDxwYXRoIGQ9Ik04IDExYTMgMyAwIDEgMSAwLTYgMyAzIDAgMCAxIDAgNm0wIDFhNCA0IDAgMSAwIDAtOCA0IDQgMCAwIDAgMCA4TTggMGEuNS41IDAgMCAxIC41LjV2MmEuNS41IDAgMCAxLTEgMHYtMkEuNS41IDAgMCAxIDggMG0wIDEzYS41LjUgMCAwIDEgLjUuNXYyYS41LjUgMCAwIDEtMSAwdi0yQS41LjUgMCAwIDEgOCAxM204LTVhLjUuNSAwIDAgMS0uNS41aC0yYS41LjUgMCAwIDEgMC0xaDJhLjUuNSAwIDAgMSAuNS41TTMgOGEuNS41IDAgMCAxLS41LjVoLTJhLjUuNSAwIDAgMSAwLTFoMkEuNS41IDAgMCAxIDMgOG0xMC42NTctNS42NTdhLjUuNSAwIDAgMSAwIC43MDdsLTEuNDE0IDEuNDE1YS41LjUgMCAxIDEtLjcwNy0uNzA4bDEuNDE0LTEuNDE0YS41LjUgMCAwIDEgLjcwNyAwbS05LjE5MyA5LjE5M2EuNS41IDAgMCAxIDAgLjcwN0wzLjA1IDEzLjY1N2EuNS41IDAgMCAxLS43MDctLjcwN2wxLjQxNC0xLjQxNGEuNS41IDAgMCAxIC43MDcgMG05LjE5MyAyLjEyMWEuNS41IDAgMCAxLS43MDcgMGwtMS40MTQtMS40MTRhLjUuNSAwIDAgMSAuNzA3LS43MDdsMS40MTQgMS40MTRhLjUuNSAwIDAgMSAwIC43MDdNNC40NjQgNC40NjVhLjUuNSAwIDAgMS0uNzA3IDBMMi4zNDMgMy4wNWEuNS41IDAgMSAxIC43MDctLjcwN2wxLjQxNCAxLjQxNGEuNS41IDAgMCAxIDAgLjcwOCIvPgo8L3N2Zz4=';
+                themeToggle.alt = 'Switch to Light Mode';
+            }
+            
+            // Save theme preference
+            localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
+        }
+
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+        // Load saved theme on page load
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-mode');
+            // Update icon for light mode
+            const themeToggle = document.getElementById('themeToggle');
+            themeToggle.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktc3VuLWZpbGwiIHZpZXdCb3g9IjAgMCAxNiAxNiI+CiAgPHBhdGggZD0iTTggMTJhNCA0IDAgMSAwIDAtOCA0IDQgMCAwIDAgMCA4TTggMGEuNS41IDAgMCAxIC41LjV2MmEuNS41IDAgMCAxLTEgMHYtMkEuNS41IDAgMCAxIDggMG0wIDEzYS41LjUgMCAwIDEgLjUuNXYyYS41LjUgMCAwIDEtMSAwdi0yQS41LjUgMCAwIDEgOCAxM204LTVhLjUuNSAwIDAgMS0uNS41aC0yYS41LjUgMCAwIDEgMC0xaDJhLjUuNSAwIDAgMSAuNS41TTMgOGEuNS41IDAgMCAxLS41LjVoLTJhLjUuNSAwIDAgMSAwLTFoMkEuNS41IDAgMCAxIDMgOG0xMC42NTctNS42NTdhLjUuNSAwIDAgMSAwIC43MDdsLTEuNDE0IDEuNDE1YS41LjUgMCAxIDEtLjcwNy0uNzA4bDEuNDE0LTEuNDE0YS41LjUgMCAwIDEgLjcwNyAwbS05LjE5MyA5LjE5M2EuNS41IDAgMCAxIDAgLjcwN0wzLjA1IDEzLjY1N2EuNS41IDAgMCAxLS43MDctLjcwN2wxLjQxNC0xLjQxNGEuNS41IDAgMCAxIC43MDcgMG05LjE5MyAyLjEyMWEuNS41IDAgMCAxLS43MDcgMGwtMS40MTQtMS40MTRhLjUuNSAwIDAgMSAuNzA3LS43MDdsMS40MTQgMS40MTRhLjUuNSAwIDAgMSAwIC43MDdNNC40NjQgNC40NjVhLjUuNSAwIDAgMS0uNzA3IDBMMi4zNDMgMy4wNWEuNS41IDAgMSAxIC43MDctLjcwN2wxLjQxNCAxLjQxNGEuNS41IDAgMCAxIDAgLjcwOCIvPgo8L3N2Zz4=';
+            themeToggle.alt = 'Switch to Dark Mode';
+        }
+    </script>
+</body>
+</html>

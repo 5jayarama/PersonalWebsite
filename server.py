@@ -500,5 +500,7 @@ def health_check():
         "graphs_folder": GRAPHS_FOLDER
     })
 
-if __name__ == '__main__' and os.environ.get("RENDER") != "true":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+if __name__ == '__main__':
+    import os
+    port = int(os.environ.get("PORT", 5000))  # use Render's assigned port
+    app.run(debug=True, host='0.0.0.0', port=port)

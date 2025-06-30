@@ -8,7 +8,9 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 import calendar
 import math
-import os
+import threading
+import time
+from flask import send_file
 
 # MATPLOTLIB FIX: Set backend before importing matplotlib.pyplot
 import matplotlib
@@ -17,16 +19,21 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns
 
+# Use Render disk mount point for persistent storage
+if os.environ.get('RENDER'):
+    GRAPHS_FOLDER = '/opt/render/project/src/static/graphs'
+else:
+    GRAPHS_FOLDER = os.path.join('static', 'graphs')
+
+# Ensure the directory exists
+os.makedirs(GRAPHS_FOLDER, exist_ok=True)
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for web requests
 
 # Configure paths
 STATIC_FOLDER = 'static'
-GRAPHS_FOLDER = os.path.join(STATIC_FOLDER, 'graphs')
 GITHUB_USERNAME = '5jayarama'
-
-# Ensure directories exist
-os.makedirs(GRAPHS_FOLDER, exist_ok=True)
 
 def fetch_repositories():
     """Fetch all repositories for the user"""
@@ -305,9 +312,8 @@ def create_commit_graph(repo_name, save_path):
     avg_commits = total_commits / active_days if active_days > 0 else 0
     density = active_days / timeline_length * 100 if timeline_length > 0 else 0
     
-    # Format date range for display in M/D/YY format (no leading zeros)
-    def format_date_no_zeros(date_obj):
-        """Format date without leading zeros"""
+    # Format date range for display in M/D/YY format with no leading zeros
+    def format_date(date_obj):
         try:
             return date_obj.strftime('%-m/%-d/%y')  # Unix format
         except:
@@ -318,8 +324,8 @@ def create_commit_graph(repo_name, save_path):
                 formatted = date_obj.strftime('%m/%d/%y')
                 return formatted.lstrip('0').replace('/0', '/')
     
-    start_date = format_date_no_zeros(x_dates[0])
-    end_date = format_date_no_zeros(x_dates[-1])
+    start_date = format_date(x_dates[0])
+    end_date = format_date(x_dates[-1])
     
     plt.figtext(0.02, 0.02, 
                f'Total: {total_commits} commits | Active: {active_days}/{timeline_length} days ({density:.1f}%) | Period: {start_date} to {end_date}',
@@ -344,45 +350,126 @@ def create_commit_graph(repo_name, save_path):
         'date_range': f"{start_date} to {end_date}"
     }
 
+# NEW PRELOADING SYSTEM FUNCTIONS
+def generate_all_graphs():
+    """Generate graphs for ALL repositories"""
+    print("🚀 Generating ALL repository graphs...")
+    
+    try:
+        repos = fetch_repositories()
+        successful = 0
+        failed = 0
+        
+        for i, repo in enumerate(repos[:15], 1):
+            repo_name = repo['name']
+            graph_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_commits.png")
+            stats_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_stats.json")
+            
+            print(f"📊 [{i}/15] Generating graph for {repo_name}...")
+            
+            try:
+                stats = create_commit_graph(repo_name, graph_path)
+                
+                if stats:
+                    # Save stats alongside the graph
+                    with open(stats_path, 'w') as f:
+                        json.dump(stats, f, indent=2)
+                    print(f"✅ [{i}/15] Generated graph for {repo_name}")
+                    successful += 1
+                else:
+                    print(f"⚠️ [{i}/15] No commits found for {repo_name}")
+                    failed += 1
+                    
+            except Exception as e:
+                print(f"❌ [{i}/15] Error generating {repo_name}: {e}")
+                failed += 1
+        
+        print(f"📈 Graph generation complete: {successful} successful, {failed} failed")
+        return successful
+        
+    except Exception as e:
+        print(f"❌ Error in generate_all_graphs: {e}")
+        return 0
+
+def hourly_graph_refresh():
+    """Background task that generates ALL graphs every hour"""
+    print("🕐 Starting background graph generation system...")
+    
+    # Generate all graphs immediately on startup
+    generate_all_graphs()
+    
+    while True:
+        try:
+            # Wait exactly 1 hour (3600 seconds)
+            print(f"⏰ Waiting 1 hour for next refresh... (next update at {(datetime.now() + timedelta(hours=1)).strftime('%H:%M:%S')})")
+            time.sleep(3600)
+            
+            print("🔄 HOURLY REFRESH: Regenerating all graphs...")
+            successful = generate_all_graphs()
+            
+            if successful > 0:
+                print(f"✅ Hourly refresh completed successfully ({successful} graphs updated)")
+            else:
+                print("⚠️ Hourly refresh completed but no graphs were generated")
+            
+        except Exception as e:
+            print(f"❌ Error in hourly refresh cycle: {e}")
+            # Continue the loop even if there's an error
+            time.sleep(60)  # Wait 1 minute before retrying
+
+def start_background_graph_system():
+    """Start the background graph generation system"""
+    refresh_thread = threading.Thread(target=hourly_graph_refresh, daemon=True)
+    refresh_thread.start()
+    print("🚀 Background graph system started - generating all graphs every hour")
+
+# FLASK ROUTES
 @app.route('/')
 def index():
     """Serve the main HTML page"""
-    # Try multiple possible HTML file names
-    possible_files = ['website2.html', 'index.html', 'website.html']
-    
-    for filename in possible_files:
-        try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            continue
-    
-    # If no HTML file found, show setup instructions
-    return '''
-    <h1>Setup Required</h1>
-    <p>Please save your HTML file as one of these names in the same folder as server.py:</p>
-    <ul>
-        <li>website2.html</li>
-        <li>index.html</li>
-        <li>website.html</li>
-    </ul>
-    <p>Current folder should have:</p>
-    <pre>
-    PersonalWebsite/
-    ├── server.py
-    └── [your-html-file].html
-    </pre>
-    '''
+    return send_file('index.html')
 
 @app.route('/api/repositories')
 def get_repositories():
-    """Get list of repositories"""
+    """Get list of repositories with preloaded graph info"""
     try:
         repos = fetch_repositories()
         
-        # Show all repositories
         repo_data = []
-        for repo in repos[:15]:  # Reasonable limit of 15 instead of 5
+        for repo in repos[:15]:
+            repo_name = repo['name']
+            graph_filename = f"{repo_name}_commits.png"
+            graph_path = os.path.join(GRAPHS_FOLDER, graph_filename)
+            stats_filename = f"{repo_name}_stats.json"
+            stats_path = os.path.join(GRAPHS_FOLDER, stats_filename)
+            
+            # Check if BOTH graph and stats files exist
+            graph_info = None
+            if os.path.exists(graph_path) and os.path.exists(stats_path):
+                try:
+                    # Check file age (for display purposes)
+                    file_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(graph_path))
+                    age_minutes = int(file_age.total_seconds() / 60)
+                    
+                    # Load stats
+                    with open(stats_path, 'r') as f:
+                        stats = json.load(f)
+                    
+                    graph_info = {
+                        'image_url': f"/static/graphs/{graph_filename}",
+                        'stats': stats,
+                        'ready': True,
+                        'age_minutes': age_minutes
+                    }
+                    print(f"✅ Preloaded graph available for {repo_name} (age: {age_minutes}m)")
+                    
+                except Exception as e:
+                    print(f"⚠️ Error loading cached data for {repo_name}: {e}")
+                    graph_info = {'ready': False, 'reason': 'corrupted'}
+            else:
+                print(f"❌ No preloaded graph for {repo_name}")
+                graph_info = {'ready': False, 'reason': 'missing'}
+            
             repo_data.append({
                 'name': repo['name'],
                 'description': repo['description'],
@@ -391,13 +478,19 @@ def get_repositories():
                 'language': repo['language'],
                 'updated_at': repo['updated_at'],
                 'html_url': repo['html_url'],
-                'commit_count': 'Click to generate'  # Don't fetch upfront for speed
+                'graph': graph_info
             })
+        
+        ready_count = sum(1 for repo in repo_data if repo['graph']['ready'])
+        print(f"📊 Repository API called: {ready_count}/15 graphs ready")
         
         return jsonify({
             "status": "success",
-            "repositories": repo_data
+            "repositories": repo_data,
+            "graphs_ready": ready_count,
+            "total_repos": len(repo_data)
         })
+        
     except Exception as e:
         return jsonify({
             "status": "error",
@@ -406,20 +499,46 @@ def get_repositories():
 
 @app.route('/api/generate_graph/<repo_name>')
 def generate_graph(repo_name):
-    """Generate commit graph for a specific repository"""
+    """Generate commit graph for a specific repository (with caching)"""
     try:
-        # Generate graph and save to static folder
         graph_filename = f"{repo_name}_commits.png"
         graph_path = os.path.join(GRAPHS_FOLDER, graph_filename)
+        stats_filename = f"{repo_name}_stats.json"
+        stats_path = os.path.join(GRAPHS_FOLDER, stats_filename)
         
-        # Create the graph
+        # Check if both graph and stats files exist
+        if os.path.exists(graph_path) and os.path.exists(stats_path):
+            print(f"Using cached graph and stats for {repo_name}")
+            
+            # Load cached stats
+            try:
+                with open(stats_path, 'r') as f:
+                    stats = json.load(f)
+                
+                return jsonify({
+                    "status": "success",
+                    "image_url": f"/static/graphs/{graph_filename}",
+                    "stats": stats,
+                    "cached": True
+                })
+            except json.JSONDecodeError:
+                print(f"Corrupted stats file for {repo_name}, regenerating...")
+                # Falls through to regeneration
+        
+        # Generate new graph if it doesn't exist or stats are corrupted
+        print(f"Generating new graph for {repo_name}")
         stats = create_commit_graph(repo_name, graph_path)
         
         if stats is not None:
+            # Save stats alongside the image
+            with open(stats_path, 'w') as f:
+                json.dump(stats, f, indent=2)
+            
             return jsonify({
                 "status": "success",
                 "image_url": f"/static/graphs/{graph_filename}",
-                "stats": stats
+                "stats": stats,
+                "cached": False
             })
         else:
             return jsonify({
@@ -501,6 +620,17 @@ def health_check():
     })
 
 if __name__ == '__main__':
-    import os
-    port = int(os.environ.get("PORT", 5000))  # use Render's assigned port
-    app.run(debug=True, host='0.0.0.0', port=port)
+    print("🚀 Starting GitHub Graphs Server...")
+    
+    # Start the background graph generation system
+    start_background_graph_system()
+    
+    # Start Flask app
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("DEBUG", "False").lower() == "true"
+    
+    print(f"🌐 Server starting on port {port}")
+    print("📊 All 15 graphs will be generated immediately and refreshed every hour")
+    print("🔥 Graphs will display instantly when users click on repositories")
+    
+    app.run(debug=debug, host='0.0.0.0', port=port)

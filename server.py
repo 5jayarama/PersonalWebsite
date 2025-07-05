@@ -34,17 +34,27 @@ CORS(app)  # Enable CORS for web requests
 # Configure paths
 STATIC_FOLDER = 'static'
 GITHUB_USERNAME = '5jayarama'
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+
+# GitHub API headers with authentication
+GITHUB_HEADERS = {
+    'Authorization': f'token {GITHUB_TOKEN}',
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': f'PersonalWebsite-{GITHUB_USERNAME}'
+}
 
 def fetch_repositories():
     """Fetch all repositories for the user"""
     url = f"https://api.github.com/users/{GITHUB_USERNAME}/repos"
     params = {'sort': 'updated', 'per_page': 100}
     
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, headers=GITHUB_HEADERS)
     if response.status_code == 200:
         return response.json()
     else:
         print(f"Error fetching repositories: {response.status_code}")
+        if response.status_code == 403:
+            print(f"Rate limit info: {response.headers.get('X-RateLimit-Remaining', 'unknown')} requests remaining")
         return []
 
 def fetch_commits(repo_name, per_page=100):
@@ -52,13 +62,69 @@ def fetch_commits(repo_name, per_page=100):
     url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{repo_name}/commits"
     params = {'per_page': per_page}
     
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, headers=GITHUB_HEADERS)
     if response.status_code == 200:
         commits = response.json()
         return [commit['commit']['author']['date'] for commit in commits]
     else:
         print(f"Error fetching commits for {repo_name}: {response.status_code}")
+        if response.status_code == 403:
+            print(f"Rate limit info: {response.headers.get('X-RateLimit-Remaining', 'unknown')} requests remaining")
         return []
+
+# Added this new function to check rate limits
+def check_rate_limit():
+    """Check GitHub API rate limit status"""
+    url = "https://api.github.com/rate_limit"
+    response = requests.get(url, headers=GITHUB_HEADERS)
+    if response.status_code == 200:
+        data = response.json()
+        core = data['resources']['core']
+        print(f"🔄 Rate limit: {core['remaining']}/{core['limit']} requests remaining")
+        reset_time = datetime.fromtimestamp(core['reset'])
+        print(f"🕐 Resets at: {reset_time.strftime('%H:%M:%S')}")
+        return core['remaining'] > 10  # Return True if we have enough requests
+    return True
+
+def generate_all_graphs():
+    """Generate graphs for ALL repositories"""
+    print("🚀 Generating ALL repository graphs...")
+    # Check rate limit before starting
+    if not check_rate_limit():
+        print("⚠️ Rate limit too low, skipping graph generation")
+        return 0
+    try:
+        repos = fetch_repositories()
+        successful = 0
+        failed = 0
+        for i, repo in enumerate(repos[:15], 1):
+            repo_name = repo['name']
+            graph_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_commits.png")
+            stats_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_stats.json")
+            print(f"📊 [{i}/15] Generating graph for {repo_name}...")
+            try:
+                stats = create_commit_graph(repo_name, graph_path)
+                if stats:
+                    # Save stats alongside the graph
+                    with open(stats_path, 'w') as f:
+                        json.dump(stats, f, indent=2)
+                    print(f"✅ [{i}/15] Generated graph for {repo_name}")
+                    successful += 1
+                else:
+                    print(f"⚠️ [{i}/15] No commits found for {repo_name}")
+                    failed += 1
+                    
+            except Exception as e:
+                print(f"❌ [{i}/15] Error generating {repo_name}: {e}")
+                failed += 1
+        print(f"📈 Graph generation complete: {successful} successful, {failed} failed")
+        return successful
+    except Exception as e:
+        print(f"❌ Error in generate_all_graphs: {e}")
+        return 0
+# Added Flask configuration for better performance
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 300  # Cache static files for 5 minutes
+app.config['JSON_SORT_KEYS'] = False  # Preserve JSON key order
 
 def process_commit_data(commit_dates):
     """Convert commit dates to daily counts with actual dates"""
@@ -428,6 +494,10 @@ def start_background_graph_system():
 def index():
     """Serve the main HTML page"""
     return send_file('index.html')
+
+@app.route('/styles.css')
+def serve_styles():
+    return send_file('styles.css')
 
 @app.route('/api/repositories')
 def get_repositories():

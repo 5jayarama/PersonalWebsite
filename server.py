@@ -11,6 +11,7 @@ import math
 import threading
 import time
 from flask import send_file
+from dotenv import load_dotenv
 
 # MATPLOTLIB FIX: Set backend before importing matplotlib.pyplot
 import matplotlib
@@ -34,7 +35,12 @@ CORS(app)  # Enable CORS for web requests
 # Configure paths
 STATIC_FOLDER = 'static'
 GITHUB_USERNAME = '5jayarama'
+load_dotenv()
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+
+print(f"🔍 Token loaded: {len(GITHUB_TOKEN) if GITHUB_TOKEN else 0} characters")
+print(f"🔍 Token starts with ghp_: {GITHUB_TOKEN.startswith('ghp_') if GITHUB_TOKEN else False}")
+print(f"🔍 First 10 characters: {GITHUB_TOKEN[:10] if GITHUB_TOKEN else 'None'}")
 
 # GitHub API headers with authentication
 GITHUB_HEADERS = {

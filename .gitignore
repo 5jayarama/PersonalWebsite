@@ -1,0 +1,11 @@
+# Generated graphs
+static/graphs/
+*.png
+*.json
+
+# Environment variables
+.env
+
+# Other generated files
+__pycache__/
+*.pyc

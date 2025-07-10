@@ -38,10 +38,6 @@ GITHUB_USERNAME = '5jayarama'
 load_dotenv()
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 
-print(f"🔍 Token loaded: {len(GITHUB_TOKEN) if GITHUB_TOKEN else 0} characters")
-print(f"🔍 Token starts with ghp_: {GITHUB_TOKEN.startswith('ghp_') if GITHUB_TOKEN else False}")
-print(f"🔍 First 10 characters: {GITHUB_TOKEN[:10] if GITHUB_TOKEN else 'None'}")
-
 # GitHub API headers with authentication
 GITHUB_HEADERS = {
     'Authorization': f'token {GITHUB_TOKEN}',
@@ -68,14 +64,27 @@ def fetch_commits(repo_name, per_page=100):
     url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{repo_name}/commits"
     params = {'per_page': per_page}
     
+    print(f"🔍 Fetching commits for {repo_name} from: {url}")
     response = requests.get(url, params=params, headers=GITHUB_HEADERS)
+    
     if response.status_code == 200:
         commits = response.json()
+        print(f"✅ Successfully fetched {len(commits)} commits for {repo_name}")
         return [commit['commit']['author']['date'] for commit in commits]
     else:
-        print(f"Error fetching commits for {repo_name}: {response.status_code}")
+        print(f"❌ Error fetching commits for {repo_name}: HTTP {response.status_code}")
         if response.status_code == 403:
-            print(f"Rate limit info: {response.headers.get('X-RateLimit-Remaining', 'unknown')} requests remaining")
+            print(f"⚠️ Rate limit info: {response.headers.get('X-RateLimit-Remaining', 'unknown')} requests remaining")
+            reset_time = response.headers.get('X-RateLimit-Reset')
+            if reset_time:
+                reset_datetime = datetime.fromtimestamp(int(reset_time))
+                print(f"⏰ Rate limit resets at: {reset_datetime}")
+        elif response.status_code == 404:
+            print(f"🚫 Repository {repo_name} not found or no access")
+        elif response.status_code == 409:
+            print(f"📭 Repository {repo_name} is empty (no commits)")
+        else:
+            print(f"🔥 Unexpected error for {repo_name}: {response.text[:200]}")
         return []
 
 # Added this new function to check rate limits
@@ -101,27 +110,28 @@ def generate_all_graphs():
         return 0
     try:
         repos = fetch_repositories()
+        total_repos = len(repos)
         successful = 0
         failed = 0
-        for i, repo in enumerate(repos[:15], 1):
+        for i, repo in enumerate(repos, 1):
             repo_name = repo['name']
             graph_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_commits.png")
             stats_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_stats.json")
-            print(f"📊 [{i}/15] Generating graph for {repo_name}...")
+            print(f"📊 [{i}/{total_repos}] Generating graph for {repo_name}...")
             try:
                 stats = create_commit_graph(repo_name, graph_path)
                 if stats:
                     # Save stats alongside the graph
                     with open(stats_path, 'w') as f:
                         json.dump(stats, f, indent=2)
-                    print(f"✅ [{i}/15] Generated graph for {repo_name}")
+                    print(f"✅ [{i}/{total_repos}] Generated graph for {repo_name}")
                     successful += 1
                 else:
-                    print(f"⚠️ [{i}/15] No commits found for {repo_name}")
+                    print(f"⚠️ [{i}/{total_repos}] No commits found for {repo_name}")
                     failed += 1
                     
             except Exception as e:
-                print(f"❌ [{i}/15] Error generating {repo_name}: {e}")
+                print(f"❌ [{i}/{total_repos}] Error generating {repo_name}: {e}")
                 failed += 1
         print(f"📈 Graph generation complete: {successful} successful, {failed} failed")
         return successful
@@ -175,15 +185,23 @@ def create_commit_graph(repo_name, save_path):
     """Create seaborn regplot with dates on x-axis and LOWESS smoothing"""
     
     # Fetch commit data
-    print(f"Fetching commits for {repo_name}...")
+    print(f"🚀 Starting graph creation for {repo_name}...")
     commit_dates = fetch_commits(repo_name)
     
     if not commit_dates:
-        print(f"No commits found for {repo_name}")
+        print(f"❌ No commits found for {repo_name} - cannot create graph")
         return None
+    
+    print(f"📊 Processing {len(commit_dates)} commit dates for {repo_name}")
     
     # Process data into date-based x, y format
     x_dates, y = process_commit_data(commit_dates)
+    
+    if not x_dates or not y:
+        print(f"❌ Failed to process commit data for {repo_name}")
+        return None
+    
+    print(f"📈 Timeline data ready for {repo_name}: {len(x_dates)} data points")
     
     if not x_dates or not y:
         return None
@@ -510,9 +528,10 @@ def get_repositories():
     """Get list of repositories with preloaded graph info"""
     try:
         repos = fetch_repositories()
+        total_repos = len(repos)
         
         repo_data = []
-        for repo in repos[:15]:
+        for repo in repos:
             repo_name = repo['name']
             graph_filename = f"{repo_name}_commits.png"
             graph_path = os.path.join(GRAPHS_FOLDER, graph_filename)
@@ -558,7 +577,7 @@ def get_repositories():
             })
         
         ready_count = sum(1 for repo in repo_data if repo['graph']['ready'])
-        print(f"📊 Repository API called: {ready_count}/15 graphs ready")
+        print(f"📊 Repository API called: {ready_count}/{total_repos} graphs ready")
         
         return jsonify({
             "status": "success",
@@ -706,7 +725,7 @@ if __name__ == '__main__':
     debug = os.environ.get("DEBUG", "False").lower() == "true"
     
     print(f"🌐 Server starting on port {port}")
-    print("📊 All 15 graphs will be generated immediately and refreshed every hour")
+    print("📊 All repository graphs will be generated immediately and refreshed every hour")
     print("🔥 Graphs will display instantly when users click on repositories")
     
     app.run(debug=debug, host='0.0.0.0', port=port)

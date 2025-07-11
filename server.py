@@ -133,6 +133,7 @@ def generate_all_graphs():
             except Exception as e:
                 print(f"❌ [{i}/{total_repos}] Error generating {repo_name}: {e}")
                 failed += 1
+                time.sleep(0.1)  # 100ms between graphs
         print(f"📈 Graph generation complete: {successful} successful, {failed} failed")
         return successful
     except Exception as e:
@@ -717,15 +718,20 @@ def health_check():
 if __name__ == '__main__':
     print("🚀 Starting GitHub Graphs Server...")
     
-    # Start the background graph generation system
+    # PRE-BUILD: Generate all graphs FIRST (prevents missing graphs)
+    print("📊 Pre-building all graphs before starting server...")
+    successful = generate_all_graphs()
+    print(f"✅ Pre-build complete: {successful} graphs generated")
+    
+    # start CPU-friendly background updates
     start_background_graph_system()
     
-    # Start Flask app
+    # start Flask app
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("DEBUG", "False").lower() == "true"
     
     print(f"🌐 Server starting on port {port}")
-    print("📊 All repository graphs will be generated immediately and refreshed every hour")
+    print("📊 All repository graphs pre-built and will refresh every hour")
     print("🔥 Graphs will display instantly when users click on repositories")
     
     app.run(debug=debug, host='0.0.0.0', port=port)

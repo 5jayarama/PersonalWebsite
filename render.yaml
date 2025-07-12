@@ -3,11 +3,12 @@ services:
     name: github-graphs
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python server.py  # ← Change this if your file is named differently
+    startCommand: python server.py
+    workDir: PersonalWebsite
     envVars:
       - key: PORT
         value: 10000
     disk:
       name: graphs-storage
-      mountPath: /opt/render/project/src/static/graphs
-      sizeGB: 1  # $1/month for persistent graph storage
+      mountPath: /opt/render/project/src/PersonalWebsite/static/graphs
+      sizeGB: 1

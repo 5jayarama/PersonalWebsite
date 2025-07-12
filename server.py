@@ -1,45 +1,40 @@
-from flask import Flask, render_template, jsonify, send_from_directory
-from flask_cors import CORS
 import os
 import json
-import requests
+import math
+import time
+import threading
 from datetime import datetime, timedelta, timezone
+import requests
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 import calendar
-import math
-import threading
-import time
-from flask import send_file
 from dotenv import load_dotenv
+from flask import Flask, render_template, jsonify, send_from_directory, send_file
+from flask_cors import CORS
 import matplotlib
-from matplotlib.ticker import FuncFormatter
-matplotlib.use('Agg')  # Use non-GUI backend for server environments
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.ticker import FuncFormatter
 import seaborn as sns
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
 
-# Use Render disk mount point for persistent storage
+load_dotenv()
+
+GITHUB_USERNAME = '5jayarama'
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+
 if os.environ.get('RENDER'):
     GRAPHS_FOLDER = '/opt/render/project/src/static/graphs'
 else:
     GRAPHS_FOLDER = os.path.join('static', 'graphs')
 
-# Ensure the directory exists
 os.makedirs(GRAPHS_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for web requests
+CORS(app)
 
-# Configure paths
-STATIC_FOLDER = 'static'
-GITHUB_USERNAME = '5jayarama'
-load_dotenv()
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-
-# GitHub API headers with authentication
 GITHUB_HEADERS = {
     'Authorization': f'token {GITHUB_TOKEN}',
     'Accept': 'application/vnd.github.v3+json',
@@ -329,7 +324,7 @@ def create_commit_graph(repo_name, save_path):
     
     # Save and return
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.05,
+    plt.savefig(save_path, dpi=100, bbox_inches='tight', pad_inches=0.05,
                 facecolor='white', edgecolor='none', transparent=False)
     plt.close()
     
@@ -626,14 +621,15 @@ def health_check():
         "graphs_folder": GRAPHS_FOLDER
     })
 
+
+print("🚀 Starting GitHub Graphs Server...")
+# PRE-BUILD: Generate all graphs FIRST
+print("📊 Pre-building all graphs before starting server...")
+successful = generate_all_graphs()
+print(f"✅ Pre-build complete: {successful} graphs generated")
+# Start background system BEFORE app.run()
+start_background_graph_system()
 if __name__ == '__main__':
-    print("🚀 Starting GitHub Graphs Server...")
-    # PRE-BUILD: Generate all graphs FIRST
-    print("📊 Pre-building all graphs before starting server...")
-    successful = generate_all_graphs()
-    print(f"✅ Pre-build complete: {successful} graphs generated")
-    # Start background system BEFORE app.run()
-    start_background_graph_system()
     # Start Flask app (this blocks, so put it last)
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("DEBUG", "False").lower() == "true"

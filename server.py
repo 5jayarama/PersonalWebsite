@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 import json
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 import calendar
@@ -12,13 +12,14 @@ import threading
 import time
 from flask import send_file
 from dotenv import load_dotenv
-
-# MATPLOTLIB FIX: Set backend before importing matplotlib.pyplot
 import matplotlib
+from matplotlib.ticker import FuncFormatter
 matplotlib.use('Agg')  # Use non-GUI backend for server environments
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns
+import numpy as np
+from scipy.ndimage import gaussian_filter1d
 
 # Use Render disk mount point for persistent storage
 if os.environ.get('RENDER'):
@@ -154,7 +155,7 @@ def process_commit_data(commit_dates):
     
     # Timeline from first commit to today
     first_date = dates[0].date()
-    today = datetime.now().date()
+    today = datetime.now(timezone.utc).date()
     
     print(f"Timeline: {first_date} to {today}")
     
@@ -184,209 +185,117 @@ def process_commit_data(commit_dates):
 
 def create_commit_graph(repo_name, save_path):
     """Create seaborn regplot with dates on x-axis and LOWESS smoothing"""
-    
-    # Fetch commit data
+    # Fetch and process commit data
     print(f"🚀 Starting graph creation for {repo_name}...")
     commit_dates = fetch_commits(repo_name)
-    
     if not commit_dates:
-        print(f"❌ No commits found for {repo_name} - cannot create graph")
+        print(f"❌ No commits found for {repo_name}")
         return None
     
-    print(f"📊 Processing {len(commit_dates)} commit dates for {repo_name}")
-    
-    # Process data into date-based x, y format
     x_dates, y = process_commit_data(commit_dates)
-    
     if not x_dates or not y:
         print(f"❌ Failed to process commit data for {repo_name}")
         return None
     
     print(f"📈 Timeline data ready for {repo_name}: {len(x_dates)} data points")
     
-    if not x_dates or not y:
-        return None
-    
     # Calculate statistics
-    total_commits = sum(y)
-    active_days = sum(1 for commits in y if commits > 0)
-    timeline_length = len(x_dates)
+    total_commits, active_days, timeline_length = sum(y), sum(1 for c in y if c > 0), len(x_dates)
+    baseline = 0.1 if timeline_length > 400 else 0.05 if timeline_length > 200 else 0.01 + (timeline_length // 100) * 0.01
     
-    # Dynamic baseline for smoothing curve visibility
-    if timeline_length > 400:
-        baseline = 0.1
-    elif timeline_length > 200:
-        baseline = 0.05
-    else:
-        baseline = 0.01 + (timeline_length // 100) * 0.01
-    print(f"Timeline {timeline_length} days -> baseline {baseline} for {repo_name}")
-    
-    # Create clean plot - back to original size
+    # Create plot
     plt.figure(figsize=(12, 6), facecolor='white')
     ax = plt.gca()
     sns.set_style("darkgrid")
     
-    # Plot scatter points
+    # Scatter points and smoothed curve
     plt.scatter(x_dates, y, color='blue', alpha=0.9, s=60, edgecolors='white', linewidth=2, zorder=3)
     
-    # Create smoothed curve
-    import numpy as np
-    from scipy.ndimage import gaussian_filter1d
-    
-    # Create baseline everywhere, then add peaks
+    # Create and apply smoothing
     y_smooth = np.full_like(y, baseline, dtype=float)
-    
-    # Add actual commit data on top of baseline
     for i in range(len(y)):
         if y[i] > 0:
             y_smooth[i] = max(baseline, y[i])
     
-    # Apply light smoothing
     y_smooth = gaussian_filter1d(y_smooth, sigma=0.8)
-    
-    # Force baseline everywhere
     y_smooth = np.maximum(y_smooth, baseline)
     
-    # Enhance peaks but keep baseline intact
     for i in range(len(y)):
         if y[i] > 0:
             y_smooth[i] = max(y_smooth[i], y[i] * 0.8, baseline * 3)
     
-    # Final gentle smoothing
-    y_final = gaussian_filter1d(y_smooth, sigma=0.4)
-    y_final = np.maximum(y_final, baseline)
-    
-    # Plot the smoothed curve
+    y_final = np.maximum(gaussian_filter1d(y_smooth, sigma=0.4), baseline)
     plt.plot(x_dates, y_final, color='red', linewidth=4, alpha=1.0, zorder=2)
     
-    # Set clean axis limits - start exactly at first commit date
+    # Set axis limits
     max_val = max(max(y) if y else 1, max(y_final) if len(y_final) > 0 else 1)
-    plt.ylim(bottom=-0.05, top=max_val * 1.05)  # Move 0 slightly up from bottom
-    plt.xlim(left=x_dates[0], right=x_dates[-1])  # Exact date range
+    plt.ylim(-0.05, max_val * 1.05)
+    plt.xlim(x_dates[0], x_dates[-1])
     
-    # Format x-axis with dates in M/D/YY format (no leading zeros) - HORIZONTAL
-    from matplotlib.ticker import FuncFormatter
-    
+    # Date formatter
     def date_formatter(x, pos):
-        """Custom formatter to remove leading zeros from dates"""
         try:
             date = mdates.num2date(x)
-            return date.strftime('%-m/%-d/%y')  # %-m and %-d remove leading zeros on Unix
+            return date.strftime('%-m/%-d/%y')
         except:
             try:
-                return date.strftime('%#m/%#d/%y')  # %#m and %#d remove leading zeros on Windows
+                return date.strftime('%#m/%#d/%y')
             except:
                 return date.strftime('%m/%d/%y').lstrip('0').replace('/0', '/')
     
     ax.xaxis.set_major_formatter(FuncFormatter(date_formatter))
     
-    # Intelligent tick placement based on timeline length
-    first_commit_date = x_dates[0]
-    last_date = x_dates[-1]
-    
-    # Generate tick positions based on timeline length
-    tick_positions = []
+    # Smart tick placement
+    first_commit_date, last_date = x_dates[0], x_dates[-1]
+    tick_positions = [first_commit_date]
     
     if timeline_length <= 30:
-        # Short projects: label every timeline_length/5 days (rounded up)
-        import math
+        # Short projects: every timeline_length/5 days
         interval_days = math.ceil(timeline_length / 5)
-        
         current_date = first_commit_date
         while current_date <= last_date:
             tick_positions.append(current_date)
             current_date += timedelta(days=interval_days)
-    elif timeline_length <= 90:  # Up to 3 months
-        # First of month, middle of month, end of month
+    elif timeline_length <= 90:
+        # 1-3 months: first, middle, end of months
         current_date = first_commit_date
+        next_month = current_date.replace(day=1) + relativedelta(months=1) if current_date.day > 1 else current_date
         
-        # Add the first commit date
-        tick_positions.append(current_date)
-        
-        # Find the first of the next month
-        if current_date.day > 1:
-            next_month = current_date.replace(day=1) + relativedelta(months=1)
-        else:
-            next_month = current_date
-        
-        # Add monthly ticks
-        monthly_ticks = []
         while next_month <= last_date:
-            # First of month
-            monthly_ticks.append(('first', next_month))
-            
-            # Middle of month (halfway point, rounded down)
+            tick_positions.append(next_month)  # First of month
             days_in_month = calendar.monthrange(next_month.year, next_month.month)[1]
-            middle_day = days_in_month // 2
-            middle_date = next_month.replace(day=middle_day)
-            if middle_date <= last_date:
-                monthly_ticks.append(('middle', middle_date))
-            
-            # End of month
+            middle_date = next_month.replace(day=days_in_month // 2)
             end_date = next_month.replace(day=days_in_month)
-            if end_date <= last_date:
-                monthly_ticks.append(('end', end_date))
+            
+            if middle_date <= last_date and (30 > timeline_length or abs((last_date - middle_date).days) > 10):
+                tick_positions.append(middle_date)
+            if end_date <= last_date and (30 > timeline_length or abs((last_date - end_date).days) > 10):
+                tick_positions.append(end_date)
             
             next_month += relativedelta(months=1)
-        
-        # Smart detection for 1-6 months: remove overlapping dates within 10 days
-        if 30 <= timeline_length <= 180:  # 1-6 months
-            filtered_ticks = []
-            for tick_type, tick_date in monthly_ticks:
-                # Check if this tick is too close to the final date (within 10 days)
-                if abs((last_date - tick_date).days) > 10:
-                    filtered_ticks.append(tick_date)
-            tick_positions.extend(filtered_ticks)
-        else:
-            # Under 1 month: keep all ticks
-            tick_positions.extend([tick_date for _, tick_date in monthly_ticks])
-        
-        # Add final date if not already included
-        if tick_positions[-1] != last_date:
-            tick_positions.append(last_date)
     else:
-        # More than 3 months: just monthly (first of each month)
-        current_date = first_commit_date
-        
-        # Add the first commit date
-        tick_positions.append(current_date)
-        
-        # Find the first of the next month
-        if current_date.day > 1:
-            next_month = current_date.replace(day=1) + relativedelta(months=1)
-        else:
-            next_month = current_date
-        
-        # Add first of each month
+        # 3+ months: monthly (first of each month)
+        next_month = first_commit_date.replace(day=1) + relativedelta(months=1) if first_commit_date.day > 1 else first_commit_date
         monthly_dates = []
         while next_month <= last_date:
             monthly_dates.append(next_month)
             next_month += relativedelta(months=1)
         
-        if timeline_length <= 180:  # 3-6 months: smart detection (≤10 days)
-            filtered_monthly = []
-            for month_date in monthly_dates:
-                if abs((last_date - month_date).days) > 10:
-                    filtered_monthly.append(month_date)
-            tick_positions.extend(filtered_monthly)
-        else:  # Over 6 months: always remove most recent month
-            if monthly_dates:
-                tick_positions.extend(monthly_dates[:-1])  # Remove the most recent month
-        
-        # Add final date if not already included
-        if tick_positions[-1] != last_date:
-            tick_positions.append(last_date)
+        # Filter out recent months if too close to end date
+        if timeline_length <= 180:
+            tick_positions.extend([d for d in monthly_dates if abs((last_date - d).days) > 10])
+        else:
+            tick_positions.extend(monthly_dates[:-1])  # Remove most recent month
     
-    # Remove duplicates and sort
-    tick_positions = sorted(list(set(tick_positions)))
+    # Add final date if not included
+    if tick_positions[-1] != last_date:
+        tick_positions.append(last_date)
     
-    # Set the tick locations
-    ax.set_xticks(tick_positions)
-    
-    # Keep date labels horizontal
+    # Set ticks and labels
+    ax.set_xticks(sorted(list(set(tick_positions))))
     plt.xticks(rotation=0, ha='center')
     
-    # Add labels and title
+    # Timeline description
     if timeline_length <= 7:
         timeline_desc = f"({timeline_length} days)"
     elif timeline_length <= 60:
@@ -394,38 +303,32 @@ def create_commit_graph(repo_name, save_path):
     else:
         timeline_desc = f"({timeline_length} days, ~{timeline_length//30} months)"
     
-    plt.title(f'Commit Timeline for {repo_name} {timeline_desc}', 
-             fontsize=16, fontweight='bold', pad=15)
+    # Labels and formatting
+    plt.title(f'Commit Timeline for {repo_name} {timeline_desc}', fontsize=16, fontweight='bold', pad=15)
     plt.xlabel('Date', fontsize=12, labelpad=10)
     plt.ylabel('Commits per day', fontsize=12, labelpad=10)
     
-    # Add repository info
+    # Repository stats
     avg_commits = total_commits / active_days if active_days > 0 else 0
     density = active_days / timeline_length * 100 if timeline_length > 0 else 0
     
-    # Format date range for display in M/D/YY format with no leading zeros
     def format_date(date_obj):
         try:
-            return date_obj.strftime('%-m/%-d/%y')  # Unix format
+            return date_obj.strftime('%-m/%-d/%y')
         except:
             try:
-                return date_obj.strftime('%#m/%#d/%y')  # Windows format
+                return date_obj.strftime('%#m/%#d/%y')
             except:
-                # Fallback: manual removal
                 formatted = date_obj.strftime('%m/%d/%y')
                 return formatted.lstrip('0').replace('/0', '/')
     
-    start_date = format_date(x_dates[0])
-    end_date = format_date(x_dates[-1])
-    
+    start_date, end_date = format_date(x_dates[0]), format_date(x_dates[-1])
     plt.figtext(0.02, 0.02, 
                f'Total: {total_commits} commits | Active: {active_days}/{timeline_length} days ({density:.1f}%) | Period: {start_date} to {end_date}',
                fontsize=10, ha='left')
     
-    # Clean layout - back to original spacing
+    # Save and return
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    
-    # Save with minimal padding - back to original
     plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.05,
                 facecolor='white', edgecolor='none', transparent=False)
     plt.close()
@@ -448,15 +351,18 @@ def generate_all_graphs():
     
     try:
         repos = fetch_repositories()
+        total_repos = len(repos)
         successful = 0
         failed = 0
         
-        for i, repo in enumerate(repos[:15], 1):
+        print(f"📊 Found {total_repos} repositories to process")
+        
+        for i, repo in enumerate(repos, 1):
             repo_name = repo['name']
             graph_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_commits.png")
             stats_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_stats.json")
             
-            print(f"📊 [{i}/15] Generating graph for {repo_name}...")
+            print(f"📊 [{i}/{total_repos}] Generating graph for {repo_name}...")
             
             try:
                 stats = create_commit_graph(repo_name, graph_path)
@@ -465,17 +371,21 @@ def generate_all_graphs():
                     # Save stats alongside the graph
                     with open(stats_path, 'w') as f:
                         json.dump(stats, f, indent=2)
-                    print(f"✅ [{i}/15] Generated graph for {repo_name}")
+                    print(f"✅ [{i}/{total_repos}] Generated graph for {repo_name}")
                     successful += 1
                 else:
-                    print(f"⚠️ [{i}/15] No commits found for {repo_name}")
+                    print(f"⚠️ [{i}/{total_repos}] No commits found for {repo_name}")
                     failed += 1
                     
             except Exception as e:
-                print(f"❌ [{i}/15] Error generating {repo_name}: {e}")
+                print(f"❌ [{i}/{total_repos}] Error generating {repo_name}: {e}")
                 failed += 1
+                
+            # Small delay between requests to be nice to GitHub API
+            if i < total_repos:
+                time.sleep(0.1)  # 100ms between graphs
         
-        print(f"📈 Graph generation complete: {successful} successful, {failed} failed")
+        print(f"📈 Graph generation complete: {successful} successful, {failed} failed out of {total_repos} repositories")
         return successful
         
     except Exception as e:
@@ -483,21 +393,22 @@ def generate_all_graphs():
         return 0
 
 def hourly_graph_refresh():
-    """Background task that generates ALL graphs every hour"""
     print("🕐 Starting background graph generation system...")
+    print(f"🌍 Server timezone: {datetime.now()}")
+    print(f"🌍 UTC time: {datetime.now(timezone.utc)}")
     
     # Generate all graphs immediately on startup
     generate_all_graphs()
     
     while True:
         try:
-            # Wait exactly 1 hour (3600 seconds)
             print(f"⏰ Waiting 1 hour for next refresh... (next update at {(datetime.now() + timedelta(hours=1)).strftime('%H:%M:%S')})")
             time.sleep(3600)
             
             print("🔄 HOURLY REFRESH: Regenerating all graphs...")
+            print(f"🕐 Current time: {datetime.now()}")
             successful = generate_all_graphs()
-            
+
             if successful > 0:
                 print(f"✅ Hourly refresh completed successfully ({successful} graphs updated)")
             else:
@@ -717,21 +628,14 @@ def health_check():
 
 if __name__ == '__main__':
     print("🚀 Starting GitHub Graphs Server...")
-    
-    # PRE-BUILD: Generate all graphs FIRST (prevents missing graphs)
+    # PRE-BUILD: Generate all graphs FIRST
     print("📊 Pre-building all graphs before starting server...")
     successful = generate_all_graphs()
     print(f"✅ Pre-build complete: {successful} graphs generated")
-    
-    # start CPU-friendly background updates
+    # Start background system BEFORE app.run()
     start_background_graph_system()
-    
-    # start Flask app
+    # Start Flask app (this blocks, so put it last)
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("DEBUG", "False").lower() == "true"
-    
     print(f"🌐 Server starting on port {port}")
-    print("📊 All repository graphs pre-built and will refresh every hour")
-    print("🔥 Graphs will display instantly when users click on repositories")
-    
     app.run(debug=debug, host='0.0.0.0', port=port)

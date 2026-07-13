@@ -9,7 +9,7 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 import calendar
 from dotenv import load_dotenv
-from flask import Flask, render_template, jsonify, send_from_directory, send_file
+from flask import Flask, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import matplotlib
 matplotlib.use('Agg')
@@ -83,27 +83,10 @@ def fetch_commits(repo_name, per_page=100):
             print(f"🔥 Unexpected error for {repo_name}: {response.text[:200]}")
         return []
 
-# Added this new function to check rate limits
-def check_rate_limit():
-    """Check GitHub API rate limit status"""
-    url = "https://api.github.com/rate_limit"
-    response = requests.get(url, headers=GITHUB_HEADERS)
-    if response.status_code == 200:
-        data = response.json()
-        core = data['resources']['core']
-        print(f"🔄 Rate limit: {core['remaining']}/{core['limit']} requests remaining")
-        reset_time = datetime.fromtimestamp(core['reset'])
-        print(f"🕐 Resets at: {reset_time.strftime('%H:%M:%S')}")
-        return core['remaining'] > 10  # Return True if we have enough requests
-    return True
-
 def generate_all_graphs():
     """Generate graphs for ALL repositories"""
     print("🚀 Generating ALL repository graphs...")
     # Check rate limit before starting
-    if not check_rate_limit():
-        print("⚠️ Rate limit too low, skipping graph generation")
-        return 0
     try:
         repos = fetch_repositories()
         total_repos = len(repos)
@@ -324,7 +307,7 @@ def create_commit_graph(repo_name, save_path):
     
     # Save and return
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.savefig(save_path, dpi=100, bbox_inches='tight', pad_inches=0.05,
+    plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.05,
                 facecolor='white', edgecolor='none', transparent=False)
     plt.close()
     
@@ -391,9 +374,6 @@ def hourly_graph_refresh():
     print("🕐 Starting background graph generation system...")
     print(f"🌍 Server timezone: {datetime.now()}")
     print(f"🌍 UTC time: {datetime.now(timezone.utc)}")
-    
-    # Generate all graphs immediately on startup
-    generate_all_graphs()
     
     while True:
         try:

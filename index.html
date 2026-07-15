@@ -725,8 +725,7 @@
                     document.getElementById('activeDays').textContent = stats.active_days;
                     document.getElementById('avgCommitsPerDay').textContent = stats.avg_commits_per_day;
                     
-                    const dateRange = stats.date_range.split(' to ');
-                    document.getElementById('lastCommitDate').textContent = dateRange[1] || 'N/A';
+                    document.getElementById('lastCommitDate').textContent = stats.last_commit_date || 'N/A';
 
                     // Display graph immediately
                     const chartArea = document.getElementById('chartArea');
@@ -803,8 +802,7 @@
                 document.getElementById('activeDays').textContent = stats.active_days;
                 document.getElementById('avgCommitsPerDay').textContent = stats.avg_commits_per_day;
                 
-                const dateRange = stats.date_range.split(' to ');
-                document.getElementById('lastCommitDate').textContent = dateRange[1] || 'N/A';
+                document.getElementById('lastCommitDate').textContent = stats.last_commit_date || 'N/A';
 
                 // Find the preloaded image (using data-repo attribute)
                 const preloadedImg = document.querySelector(`img.preloaded-graph[data-repo="${repo.name}"]`);

@@ -51,7 +51,7 @@
                 </div>
                 
                 <div class="home-bottom-message">
-                    Check out my projects, skills, and about section to learn more!
+                    Tip: use ← → or A/D to switch tabs, T to toggle theme.
                 </div>
             </div>
 
@@ -73,10 +73,11 @@
                             hands-on work experience. If you have any relevant job openings, I would be very happy if 
                             you reached out to me.
                             <br><br>
-                            I have noteworthy skills through my internship at GhangorCloud, various projects, 
-                            coursework, and more. I have been involved in a few extracurriculars on campus, such as the
-                            Northeastern Electric Racing Club. My interests are in networks, cybersecurity, and general 
-                            software engineering - I like keeping a broad technical foundation early in my career.
+                            I've built technical experience through my GhangorCloud internship, coursework, and 
+                            independent projects spanning security, networks, and full-stack development. Outside the 
+                            classroom, I've contributed to the Northeastern Electric Racing Club's website. My 
+                            interests lean toward networks and cybersecurity, but I like keeping a broad technical 
+                            foundation early in my career.
                             <br><br>
                             Outside of coding and studying, one of my hobbies is spending my time reading the 
                             news. I have read many wonderous articles on the latest technological advancements, 
@@ -105,8 +106,9 @@
             <div id="skillsContent" class="hidden">
                 <div class="skills-description">
                     Beyond the highlights on my resume, this page provides a more comprehensive overview of my technical 
-                    skills and how I've developed them. Click any skill below to see where I've used it, the projects 
-                    I've applied it to, and the experience I've gained along the way.
+                    skills and how I've developed them. If you are a recruiter looking for a specific skillset, feel 
+                    free to scroll down to the ones relevant to you. Click any skill to see how I've acquired it, the 
+                    projects I've applied it to, and the experience I've gained along the way.
                 </div>
                 
                 <div class="skills-section">
@@ -355,24 +357,44 @@
                             <div class="github-projects-container" data-language="burpsuite"></div>
                         </div>
                     </div>
+                    <div class="skill-item" data-skill="AWS">
+                        <div class="skill-header">
+                            <div class="skill-name">AMAZON WEB SERVICES</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 100%"></div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">
+                                I have used basic AWS services such as S3 buckets, clusters, cloudtrails, and other 
+                                tools for a variety of projects.
+                            </div>
+                            <div class="github-projects-container" data-language="burpsuite"></div>
+                        </div>
+                    </div>
+                    <div class="skill-item" data-skill="kubernetes">
+                        <div class="skill-header">
+                            <div class="skill-name">KUBERNETES</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 100%"></div>
+                        </div>
+                        <div class="projects-list">
+                            <div class="skill-description">
+                                I have used Kubernetes in AWS to make group clusters for a project. 
+                            </div>
+                            <div class="github-projects-container" data-language="burpsuite"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div id="projectsContent" class="hidden">
                 <div class="projects-description">
-                    Here is a fetched list of all my public repos from my personal github. Each project has a commit 
-                    graph which is updated every hour. This feature was inspired by a prior professor that I had, who 
-                    had his own website and put our grades on a smoothed curve, similar to this one.
-                    <br><br>
-                    The github data is fetched from a static folder and loaded in the background as soon as you enter 
-                    the site. This eliminates any possible delay for fetching or loading the graphs. Unfortunately, 
-                    the data doesn't look as good as the one my professor had, in part because I keep my commits on 
-                    most projects low - only one on project completion sometimes - whereas my professor had about 30
-                    grades to display per graph. But I wanted to try coding the feature, and I enjoyed coding it, so I 
-                    have it on display here.
-                    <br><br>
-                    Feel free to click on the link on any project that interests you to look into it further in my 
-                    github.
+                    Here's a live-fetched list of my public GitHub repositories. Each one has a commit activity graph 
+                    that updates hourly. This feature was inspired by one of my former professors who displayed grade 
+                    curves on his own website. I wanted to try building something similar, so I implemented it for 
+                    commit history. Click any project to view it on GitHub in more detail.
                 </div>
                 
                 <div class="chart-container">
@@ -380,50 +402,36 @@
                         <div class="loading-message">Loading repositories...</div>
                     </div>
                     <div id="selectedProjectInfo" style="display: none;">
-                        <div class="flip-card" id="projectFlipCard">
-                            <div class="flip-card-inner">
-                                <!-- FRONT: Project Description -->
-                                <div class="flip-card-front">
-                                    <div class="project-details">
-                                        <div id="projectName" class="project-name"></div>
-                                        <div class="chart-title">Project Description</div>
-                                        <div id="projectDescription" class="project-description">No description available</div>
-                                        <div id="projectStats" class="project-stats"></div>
-                                    </div>
-                                    <div class="project-links">
-                                        <a id="projectGithubLink" href="#" target="_blank" class="project-link" onclick="event.stopPropagation()">View on GitHub</a>
-                                    </div>
-                                    <div class="flip-hint">Click to view commit graph →</div>
-                                </div>
+                        <div class="project-details">
+                            <div id="projectName" class="project-name"></div>
+                            <div id="projectDescription" class="project-description">No description available</div>
+                        </div>
+                        <div class="project-links">
+                            <a id="projectGithubLink" href="#" target="_blank" class="project-link">View on GitHub</a>
+                        </div>
 
-                                <!-- BACK: Commit Graph -->
-                                <div class="flip-card-back">
-                                    <div class="commit-summary">
-                                        <div class="commit-stat">
-                                            <span id="totalCommits" class="commit-stat-number">0</span>
-                                            <span class="commit-stat-label">Total Commits</span>
-                                        </div>
-                                        <div class="commit-stat">
-                                            <span id="activeDays" class="commit-stat-number">0</span>
-                                            <span class="commit-stat-label">Active Days</span>
-                                        </div>
-                                        <div class="commit-stat">
-                                            <span id="avgCommitsPerDay" class="commit-stat-number">0</span>
-                                            <span class="commit-stat-label">Avg per Day</span>
-                                        </div>
-                                        <div class="commit-stat">
-                                            <span id="lastCommitDate" class="commit-stat-number">--</span>
-                                            <span class="commit-stat-label">Last Commit</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="chart-title">Python-Generated Commit Graph with Smoothened Curve</div>
-                                    <div id="chartArea">
-                                        <div class="loading-message">Select a project to view its commit timeline...</div>
-                                    </div>
-                                    <div class="flip-hint">← Click to view description</div>
-                                </div>
+                        <div class="commit-summary">
+                            <div class="commit-stat">
+                                <span id="totalCommits" class="commit-stat-number">0</span>
+                                <span class="commit-stat-label">Total Commits</span>
                             </div>
+                            <div class="commit-stat">
+                                <span id="activeDays" class="commit-stat-number">0</span>
+                                <span class="commit-stat-label">Active Days</span>
+                            </div>
+                            <div class="commit-stat">
+                                <span id="avgCommitsPerDay" class="commit-stat-number">0</span>
+                                <span class="commit-stat-label">Avg per Day</span>
+                            </div>
+                            <div class="commit-stat">
+                                <span id="lastCommitDate" class="commit-stat-number">--</span>
+                                <span class="commit-stat-label">Last Commit</span>
+                            </div>
+                        </div>
+
+                        <div class="chart-title">Python-Generated Commit Graph with Smoothened Curve</div>
+                        <div id="chartArea">
+                            <div class="loading-message">Select a project to view its commit timeline...</div>
                         </div>
                     </div>
                 </div>
@@ -434,7 +442,6 @@
                     Feel free to connect with me on LinkedIn if you know me or want to get acquainted. <br>
                     For fastest response time, just text or call my phone number! My number is 510-953-2104.
                 </div>
-                
                 <form class="contact-form">
                     <div class="form-group">
                         <label class="form-label">Name</label>
@@ -729,16 +736,6 @@
                 document.getElementById('projectDescription').textContent = firstRepo.description || 'No description available';
                 document.getElementById('projectGithubLink').href = firstRepo.html_url;
 
-                // Update project stats immediately
-                const statsHTML = [
-                    `<div class="project-stat"><span>⭐</span><span>${firstRepo.stars}</span></div>`,
-                    `<div class="project-stat"><span>🍴</span><span>${firstRepo.forks}</span></div>`,
-                    firstRepo.language ? `<div class="project-stat"><span>📝</span><span>${firstRepo.language}</span></div>` : '',
-                    `<div class="project-stat"><span>📅</span><span>${new Date(firstRepo.updated_at).toLocaleDateString()}</span></div>`
-                ].filter(Boolean).join('');
-                
-                document.getElementById('projectStats').innerHTML = statsHTML;
-
                 // Display first graph IMMEDIATELY (no delay)
                 if (firstRepo.graph && firstRepo.graph.ready) {
                     const stats = firstRepo.graph.stats;
@@ -805,16 +802,6 @@
             document.getElementById('projectName').textContent = repo.name;
             document.getElementById('projectDescription').textContent = repo.description || 'No description available';
             document.getElementById('projectGithubLink').href = repo.html_url;
-
-            // Update project stats
-            const statsHTML = [
-                `<div class="project-stat"><span>⭐</span><span>${repo.stars}</span></div>`,
-                `<div class="project-stat"><span>🍴</span><span>${repo.forks}</span></div>`,
-                repo.language ? `<div class="project-stat"><span>📝</span><span>${repo.language}</span></div>` : '',
-                `<div class="project-stat"><span>📅</span><span>${new Date(repo.updated_at).toLocaleDateString()}</span></div>`
-            ].filter(Boolean).join('');
-            
-            document.getElementById('projectStats').innerHTML = statsHTML;
 
             // Display graph using preloaded images
             if (repo.graph && repo.graph.ready) {
@@ -883,6 +870,26 @@
                 }
             }
         }
+
+        // Keyboard navigation for tabs + theme toggle
+        document.addEventListener('keydown', function(e) {
+            // Don't trigger shortcuts while typing in form fields
+            const isTyping = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+            if (isTyping) return;
+
+            const tabs = Array.from(document.querySelectorAll('.tab'));
+            const activeIndex = tabs.findIndex(tab => tab.classList.contains('active'));
+
+            if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+                const nextIndex = (activeIndex + 1) % tabs.length;
+                tabs[nextIndex].click();
+            } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+                const prevIndex = (activeIndex - 1 + tabs.length) % tabs.length;
+                tabs[prevIndex].click();
+            } else if (e.key === 't' || e.key === 'T') {
+                toggleTheme();
+            }
+        });
 
         loadGitHubData();
 

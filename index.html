@@ -11,7 +11,7 @@
         <div class="tabs-container">
             <a href="#" class="tab" data-page="Home">Home</a>
             <a href="#" class="tab" data-page="About Me">About Me</a>
-            <a href="#" class="tab" data-page="Skills">Skills</a>
+            <a href="#" class="tab" data-page="Skills &amp; Experience">Skills &amp; Experience</a>
             <a href="#" class="tab" data-page="Projects">Projects</a>
             <a href="#" class="tab" data-page="Contact Me">Contact Me</a>
         </div>
@@ -102,15 +102,62 @@
                     </div>
                 </div>
             </div>
-
+            
+            <!-- This is the code for the Skills & Experience page -->
             <div id="skillsContent" class="hidden">
                 <div class="skills-description">
-                    Beyond the highlights on my resume, this page provides a more comprehensive overview of my technical 
-                    skills and how I've developed them. If you are a recruiter looking for a specific skillset, feel 
-                    free to scroll down to the ones relevant to you. Click any skill to see how I've acquired it, the 
-                    projects I've applied it to, and the experience I've gained along the way.
+                    Beyond the highlights on my resume, this page provides a more comprehensive overview of my work 
+                    experience and technical skills, and how I've developed them. If you are a recruiter looking for 
+                    a specific skillset, feel free to scroll down to the ones relevant to you. Click any skill to see 
+                    how I've acquired it, the projects I've applied it to, and the experience I've gained along the way.
                 </div>
-                
+
+                <div class="skills-section">
+                    <div class="section-title">EXPERIENCE</div>
+
+                    <div class="skill-item" data-skill="ghangor-cloud">
+                        <div class="skill-header">
+                            <div class="skill-name">CYBERSECURITY INTERN — GHANGOR CLOUD</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 100%"></div>
+                        </div>
+                        <div class="projects-list expanded">
+                            <div class="skill-description">
+                                August 2023 – December 2023
+                            </div>
+                            <ul class="experience-bullets">
+                                <li>Developed and tested features for CAPE, a data privacy platform. Independently deployed connectors, crafted custom regex patterns, and set up MySQL databases to rigorously evaluate CAPE's security and data privacy capabilities.</li>
+                                <li>Identified and reported security and functionality issues during testing, contributing to platform improvements.</li>
+                                <li>Extended a Keycloak webhook extension to intercept and modify outgoing event messages before forwarding them to external services.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="skill-item" data-skill="delegates-beyond-borders">
+                        <div class="skill-header">
+                            <div class="skill-name">ECOMMERCE INTERN — DELEGATES BEYOND BORDERS LLC</div>
+                        </div>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 100%"></div>
+                        </div>
+                        <div class="projects-list expanded">
+                            <div class="skill-description">
+                                January 2023 – July 2023
+                            </div>
+                            <ul class="experience-bullets">
+                                <li>Assisted in managing online store operations, focusing on merchandise for the company including product listings, inventory updates, and order fulfillment, leading to a 12% improvement in efficiency.</li>
+                                <li>Collaborated with the marketing team to design and implement email marketing campaigns, resulting in a 35% growth in customer engagement.</li>
+                                <li>Analyzed website traffic and user behavior data using Google Analytics to enhance the customer experience.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="skills-section">
+                    <div class="section-title">SKILLS</div>
+                </div>
+
                 <div class="skills-section">
                     <div class="section-title">LANGUAGES</div>
                     
@@ -389,6 +436,7 @@
                 </div>
             </div>
 
+            <!-- This is the code for the Projects page -->
             <div id="projectsContent" class="hidden">
                 <div class="projects-description">
                     Here's a live-fetched list of my public GitHub repositories. Each one has a commit activity graph 
@@ -561,7 +609,7 @@
                 document.getElementById('homeContent').classList.add('hidden');
                 
                 // Show relevant content
-                if (pageName === 'Skills') {
+                if (pageName === 'Skills & Experience') {
                     skillsContent.classList.remove('hidden');
                 } else if (pageName === 'Contact Me') {
                     contactContent.classList.remove('hidden');
@@ -580,7 +628,9 @@
             });
         });
         
-        // Add click handlers for skills to show/hide projects
+        // Add click handlers for skills (and experience entries, which use the
+        // same bubble) to show/hide their content. Experience entries start
+        // expanded via the "expanded" class already on their .projects-list.
         document.querySelectorAll('.skill-item').forEach(skill => {
             skill.addEventListener('click', function() {
                 const projectsList = this.querySelector('.projects-list');

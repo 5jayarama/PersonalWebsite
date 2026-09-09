@@ -2,7 +2,7 @@
 
 This is my portfolio website to present my projects, skills, and experience. I added real time GitHub functionalities and data analytics.
 
-Visit the live site here: [https://personalwebsite-oxe6.onrender.com](https://adarshjayarampersonalwebsite.onrender.com/)
+Visit the live site here: [https://adarshjayarampersonalwebsite.onrender.com/](https://adarshjayarampersonalwebsite.onrender.com/)
 
 There are five tabs: home, about me, skills, projects, and contact me
 

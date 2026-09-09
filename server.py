@@ -610,7 +610,7 @@ def contact():
             "subject": "Thanks for reaching out!",
             "text": (
                 f"Hi {name},\n\n"
-                "Thanks for reaching out! I've received your message and will get back to you soon.\n\n"
+                "Thank you so much for reaching out! This is an automated message to confirm that I have received your message in my email inbox and will get back to you soon.\n\n"
                 "For your records, here's what you sent:\n"
                 f"\"{message}\"\n\n"
                 "Best,\nAdarsh Jayaram"

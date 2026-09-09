@@ -3,13 +3,14 @@ import json
 import math
 import time
 import threading
+import resend
 from datetime import datetime, timedelta, timezone
 import requests
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 import calendar
 from dotenv import load_dotenv
-from flask import Flask, jsonify, send_from_directory, send_file
+from flask import Flask, jsonify, send_from_directory, send_file, request
 from flask_cors import CORS
 import matplotlib
 matplotlib.use('Agg')
@@ -24,6 +25,10 @@ load_dotenv()
 
 GITHUB_USERNAME = '5jayarama'
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+
+resend.api_key = os.getenv('RESEND_API_KEY')
+CONTACT_RECIPIENT = os.getenv('CONTACT_RECIPIENT')  # your email, where form submissions go
+CONTACT_FROM = os.getenv('CONTACT_FROM', 'onboarding@resend.dev')  # sender address (see note below)
 
 if os.environ.get('RENDER'):
     GRAPHS_FOLDER = '/opt/render/project/src/static/graphs'
@@ -569,6 +574,54 @@ def generate_top_graphs(top_n=3):
 def serve_graph(filename):
     """Serve generated graph images"""
     return send_from_directory(GRAPHS_FOLDER, filename)
+
+@app.route('/api/contact', methods=['POST'])
+def contact():
+    """Send a contact form submission as an email"""
+    data = request.get_json(silent=True) or request.form
+
+    name = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip()
+    message = (data.get('message') or '').strip()
+
+    if not name or not email or not message:
+        return jsonify({"status": "error", "message": "All fields are required."}), 400
+
+    if not resend.api_key or not CONTACT_RECIPIENT:
+        print("Contact form error: Resend API key or recipient not configured")
+        return jsonify({"status": "error", "message": "Contact form is not configured."}), 500
+
+    try:
+        resend.Emails.send({
+            "from": CONTACT_FROM,
+            "to": [CONTACT_RECIPIENT],
+            "reply_to": email,
+            "subject": f"Portfolio contact form: {name}",
+            "text": f"From: {name} <{email}>\n\n{message}"
+        })
+    except Exception as e:
+        print(f"Contact form send failed: {e}")
+        return jsonify({"status": "error", "message": "Failed to send message."}), 500
+
+    try:
+        resend.Emails.send({
+            "from": CONTACT_FROM,
+            "to": [email],
+            "subject": "Thanks for reaching out!",
+            "text": (
+                f"Hi {name},\n\n"
+                "Thanks for reaching out! I've received your message and will get back to you soon.\n\n"
+                "For your records, here's what you sent:\n"
+                f"\"{message}\"\n\n"
+                "Best,\nAdarsh Jayaram"
+            )
+        })
+    except Exception as e:
+        # Don't fail the whole request if just the auto-reply fails —
+        # the notification to you already went through.
+        print(f"Auto-reply send failed: {e}")
+
+    return jsonify({"status": "success", "message": "Message sent."}), 200
 
 @app.route('/api/health')
 def health_check():

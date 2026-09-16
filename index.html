@@ -439,10 +439,9 @@
             <!-- This is the code for the Projects page -->
             <div id="projectsContent" class="hidden">
                 <div class="projects-description">
-                    Here's a live-fetched list of my public GitHub repositories. Each one has a commit activity graph 
-                    that updates hourly. This feature was inspired by one of my former professors who displayed grade 
-                    curves on his own website. I wanted to try building something similar, so I implemented it for 
-                    commit history. Click any project to view it on GitHub in more detail.
+                    Here's a live-fetched list of my public GitHub repositories, along with each one's README. 
+                    Projects that are hosted live are grouped separately below. Click any project to view it on 
+                    GitHub in more detail.
                 </div>
                 
                 <div class="chart-container">
@@ -456,6 +455,7 @@
                         </div>
                         <div class="project-links">
                             <a id="projectGithubLink" href="#" target="_blank" class="project-link">View on GitHub</a>
+                            <a id="projectLiveLink" href="#" target="_blank" class="project-link" style="display: none;">🟢 Hosted Live</a>
                         </div>
 
                         <div class="commit-summary">
@@ -477,7 +477,7 @@
                             </div>
                         </div>
 
-                        <div class="chart-title">Python-Generated Commit Graph with Smoothened Curve</div>
+                        <div class="chart-title">README</div>
                         <div id="chartArea">
                             <div class="loading-message">Select a project to view its commit timeline...</div>
                         </div>
@@ -685,6 +685,7 @@
         const GITHUB_USERNAME = '5jayarama';
         const FLASK_SERVER = window.location.origin;
         let repositoriesData = [];
+        let displayedRepos = []; // repositoriesData sorted: hosted-live projects first
         let selectedRepo = null;
 
         // Load repository data and display tabs WITH PRELOADING
@@ -698,45 +699,7 @@
                 if (data.status === 'success') {
                     repositoriesData = data.repositories;
                     displayRepositoryTabs(repositoriesData);
-                    console.log(`Loaded ${data.graphs_ready}/${data.total_repos} preloaded graphs`);
-                    
-                    // PRELOAD IMAGES NOW (when page loads) - WAIT FOR COMPLETE LOADING
-                    const hiddenContainer = document.createElement('div');
-                    hiddenContainer.style.display = 'none';
-                    hiddenContainer.id = 'preloadedGraphsContainer';
-                    
-                    let loadedCount = 0;
-                    const totalImages = repositoriesData.filter(repo => repo.graph && repo.graph.ready).length;
-                    
-                    repositoriesData.forEach(repo => {
-                        if (repo.graph && repo.graph.ready) {
-                            const img = document.createElement('img');
-                            img.dataset.repo = repo.name;
-                            img.className = 'preloaded-graph';
-                            
-                            // WAIT FOR EACH IMAGE TO FULLY LOAD
-                            img.onload = () => {
-                                loadedCount++;
-                                console.log(`Loaded ${repo.name} (${loadedCount}/${totalImages})`);
-                                if (loadedCount === totalImages) {
-                                    console.log(`🎯 ALL ${totalImages} IMAGES FULLY PRELOADED - NOW INSTANT!`);
-                                }
-                            };
-                            
-                            img.onerror = () => {
-                                console.warn(`Failed to load ${repo.name}`);
-                                loadedCount++; // Still count it to avoid hanging
-                            };
-                            
-                            // Set src AFTER setting up handlers to ensure they trigger
-                            img.src = `static/graphs/${repo.name}_commits.png`;
-                            hiddenContainer.appendChild(img);
-                        }
-                    });
-                    
-                    document.body.appendChild(hiddenContainer);
-                    console.log(`Started preloading ${totalImages} graph images - waiting for complete downloads...`);
-                    
+                    console.log(`Loaded ${data.data_ready}/${data.total_repos} preloaded repo data`);
                 } else {
                     throw new Error(data.message || 'Failed to fetch repositories');
                 }
@@ -745,6 +708,73 @@
                 document.getElementById('repoTabsContainer').innerHTML = 
                     '<div class="error-message">Failed to load repository data.</div>';
             }
+        }
+
+        // Look for the word "live" followed shortly after by a URL, e.g.
+        // "HOSTED LIVE: https://..." or "Visit the live site here: https://...".
+        // Returns the URL if found, otherwise null.
+        function detectLiveUrl(readmeText) {
+            if (!readmeText) return null;
+            const match = readmeText.match(/\blive\b[\s\S]{0,80}?(https?:\/\/[^\s)"'<>\]]+)/i);
+            if (!match) return null;
+            return match[1].replace(/[.,;:)]+$/, '');
+        }
+
+        // Minimal markdown -> HTML renderer for displaying READMEs inline.
+        // Escapes HTML first, then only ever adds tags we control.
+        function renderReadme(markdown) {
+            if (!markdown) {
+                return '<p style="color: #a0aec0;">No README found for this repository.</p>';
+            }
+
+            let escaped = markdown
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // Pull fenced code blocks out first so they survive line-by-line processing
+            const codeBlocks = [];
+            escaped = escaped.replace(/```[^\n]*\n([\s\S]*?)```/g, (match, code) => {
+                codeBlocks.push(code);
+                return `\u0000CODEBLOCK${codeBlocks.length - 1}\u0000`;
+            });
+
+            const inlineFormat = (text) => text
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/__(.+?)__/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/`([^`]+?)`/g, '<code style="background:#1a202c; padding:2px 5px; border-radius:4px;">$1</code>')
+                .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" style="color:#4299e1;">$1</a>');
+
+            const lines = escaped.split('\n');
+            let html = '';
+            let inList = false;
+
+            lines.forEach(rawLine => {
+                const line = rawLine.trim();
+                const codeBlockMatch = line.match(/^\u0000CODEBLOCK(\d+)\u0000$/);
+
+                if (codeBlockMatch) {
+                    if (inList) { html += '</ul>'; inList = false; }
+                    html += `<pre style="background:#1a202c; padding:10px; border-radius:6px; overflow-x:auto; white-space:pre-wrap;"><code>${codeBlocks[codeBlockMatch[1]]}</code></pre>`;
+                } else if (/^#{1,6}\s+/.test(line)) {
+                    const level = Math.min(line.match(/^#+/)[0].length + 2, 6);
+                    const text = line.replace(/^#{1,6}\s+/, '');
+                    if (inList) { html += '</ul>'; inList = false; }
+                    html += `<h${level} style="margin: 14px 0 6px;">${inlineFormat(text)}</h${level}>`;
+                } else if (/^[-*]\s+/.test(line)) {
+                    if (!inList) { html += '<ul style="margin: 6px 0; padding-left: 20px;">'; inList = true; }
+                    html += `<li>${inlineFormat(line.replace(/^[-*]\s+/, ''))}</li>`;
+                } else if (line === '') {
+                    if (inList) { html += '</ul>'; inList = false; }
+                } else {
+                    if (inList) { html += '</ul>'; inList = false; }
+                    html += `<p style="margin: 6px 0;">${inlineFormat(line)}</p>`;
+                }
+            });
+
+            if (inList) html += '</ul>';
+            return html;
         }
 
 
@@ -756,11 +786,30 @@
                 return;
             }
 
-            const tabsHTML = repositories.map((repo, index) => 
-                `<div class="repo-tab" data-repo-index="${index}">${repo.name}</div>`
-            ).join('');
+            // Detect which projects are hosted live (from their README), then
+            // group live projects first, non-live projects after.
+            repositories.forEach(repo => {
+                repo.liveUrl = (repo.details && repo.details.ready) ? detectLiveUrl(repo.details.readme) : null;
+            });
 
-            // 1. Show tabs immediately
+            const liveRepos = repositories.filter(repo => repo.liveUrl);
+            const otherRepos = repositories.filter(repo => !repo.liveUrl);
+            displayedRepos = [...liveRepos, ...otherRepos];
+
+            let tabsHTML = '';
+            if (liveRepos.length > 0) {
+                tabsHTML += `<div style="width: 100%; color: #a0aec0; font-size: 0.85em; margin: 4px 0 2px;">🟢 Hosted Live</div>`;
+                tabsHTML += liveRepos.map(repo =>
+                    `<div class="repo-tab" data-repo-index="${displayedRepos.indexOf(repo)}">${repo.name}</div>`
+                ).join('');
+            }
+            if (otherRepos.length > 0) {
+                tabsHTML += `<div style="width: 100%; color: #a0aec0; font-size: 0.85em; margin: 10px 0 2px;">Not Hosted Live</div>`;
+                tabsHTML += otherRepos.map(repo =>
+                    `<div class="repo-tab" data-repo-index="${displayedRepos.indexOf(repo)}">${repo.name}</div>`
+                ).join('');
+            }
+
             container.innerHTML = `<div class="repo-tabs">${tabsHTML}</div>`;
 
             // Add click handlers to tabs
@@ -771,72 +820,15 @@
                 });
             });
 
-            // 2. IMMEDIATELY show first repository info and graph (no click needed)
-            if (repositories.length > 0) {
-                const firstRepo = repositories[0];
-                selectedRepo = firstRepo;
-                
-                // Mark first tab as active
-                document.querySelectorAll('.repo-tab')[0].classList.add('active');
-                
-                // Show project info section immediately
-                document.getElementById('selectedProjectInfo').style.display = 'block';
-                
-                // Update project details immediately
-                document.getElementById('projectName').textContent = firstRepo.name;
-                document.getElementById('projectDescription').textContent = firstRepo.description || 'No description available';
-                document.getElementById('projectGithubLink').href = firstRepo.html_url;
-
-                // Display first graph IMMEDIATELY (no delay)
-                if (firstRepo.graph && firstRepo.graph.ready) {
-                    const stats = firstRepo.graph.stats;
-                    
-                    // Update commit summary immediately
-                    document.getElementById('totalCommits').textContent = stats.total_commits;
-                    document.getElementById('activeDays').textContent = stats.active_days;
-                    document.getElementById('avgCommitsPerDay').textContent = stats.avg_commits_per_day;
-                    
-                    document.getElementById('lastCommitDate').textContent = stats.last_commit_date || 'N/A';
-
-                    // Display graph immediately
-                    const chartArea = document.getElementById('chartArea');
-                    const timelineDays = stats.timeline_days;
-                    const message = timelineDays < 5 
-                        ? 'No LOWESS curve available for projects with very little history'
-                        : 'This graph has been generated using Python seaborn with LOWESS smoothing';
-                    
-                    const ageInfo = firstRepo.graph.age_minutes ? ` (${firstRepo.graph.age_minutes}m old)` : '';
-                    
-                    chartArea.innerHTML = `
-                        <div style="text-align: center;">
-                            <img src="${firstRepo.graph.image_url}" 
-                                 style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #4299e1;">
-                            <div style="margin-top: 15px; color: #a0aec0;">
-                                <p>${message}${ageInfo}</p>
-                                <p>Total: ${stats.total_commits} commits | Active: ${stats.active_days} days | Timeline: ${stats.timeline_days} days</p>
-                            </div>
-                        </div>
-                    `;
-                    
-                    console.log(`⚡ First graph displayed immediately: ${firstRepo.name}`);
-                }
+            // Show the first repository immediately
+            if (displayedRepos.length > 0) {
+                selectRepository(0);
             }
-
-            // 3. BACKGROUND PRELOAD: Silently cache all other graph images
-            repositories.forEach((repo, index) => {
-                if (index > 0 && repo.graph && repo.graph.ready) {
-                    const img = new Image();
-                    img.onload = () => console.log(`Preloaded: ${repo.name}`);
-                    img.src = repo.graph.image_url;
-                }
-            });
-            
-            console.log(`🚀 Background preloading ${repositories.length - 1} graph images...`);
         }
 
-        // SIMPLIFIED: Select and display repository
+        // Select and display repository
         function selectRepository(repoIndex) {
-            const repo = repositoriesData[repoIndex];
+            const repo = displayedRepos[repoIndex];
             if (!repo) return;
 
             selectedRepo = repo;
@@ -854,71 +846,35 @@
             document.getElementById('projectDescription').textContent = repo.description || 'No description available';
             document.getElementById('projectGithubLink').href = repo.html_url;
 
-            // Display graph using preloaded images
-            if (repo.graph && repo.graph.ready) {
-                const stats = repo.graph.stats;
-                
-                // Update commit summary
-                document.getElementById('totalCommits').textContent = stats.total_commits;
-                document.getElementById('activeDays').textContent = stats.active_days;
-                document.getElementById('avgCommitsPerDay').textContent = stats.avg_commits_per_day;
-                
-                document.getElementById('lastCommitDate').textContent = stats.last_commit_date || 'N/A';
+            const liveLinkEl = document.getElementById('projectLiveLink');
+            if (repo.liveUrl) {
+                liveLinkEl.href = repo.liveUrl;
+                liveLinkEl.style.display = 'inline-block';
+            } else {
+                liveLinkEl.style.display = 'none';
+            }
 
-                // Find the preloaded image (using data-repo attribute)
-                const preloadedImg = document.querySelector(`img.preloaded-graph[data-repo="${repo.name}"]`);
-                const chartArea = document.getElementById('chartArea');
-                
-                if (preloadedImg) {
-                    // Clone the preloaded image for instant display
-                    const imgClone = preloadedImg.cloneNode(true);
-                    imgClone.style.display = 'block';
-                    imgClone.style.borderRadius = '8px';
-                    imgClone.style.border = '2px solid #4299e1';
-                    imgClone.style.maxWidth = '100%';
-                    imgClone.style.height = 'auto';
-                    
-                    const timelineDays = stats.timeline_days;
-                    const message = timelineDays < 5 
-                        ? 'No LOWESS curve available for projects with very little history'
-                        : 'This graph has been generated using Python seaborn with LOWESS smoothing';
-                    
-                    const ageInfo = repo.graph.age_minutes ? ` (${repo.graph.age_minutes}m old)` : '';
-                    
-                    chartArea.innerHTML = `
-                        <div style="text-align: center;">
-                            <div style="margin-top: 15px; color: #a0aec0;">
-                                <p>${message}${ageInfo}</p>
-                                <p>Total: ${stats.total_commits} commits | Active: ${stats.active_days} days | Timeline: ${stats.timeline_days} days</p>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Insert the preloaded image at the top for instant display
-                    chartArea.firstElementChild.insertBefore(imgClone, chartArea.firstElementChild.firstChild);
-                    
-                } else {
-                    console.warn(`No preloaded image found for ${repo.name} - using fallback`);
-                    
-                    // Fallback to dynamic loading
-                    const timelineDays = stats.timeline_days;
-                    const message = timelineDays < 3 
-                        ? 'No LOWESS curve available for projects with very little history'
-                        : 'This graph has been generated using Python seaborn with LOWESS smoothing';
-                    
-                    const ageInfo = repo.graph.age_minutes ? ` (${repo.graph.age_minutes}m old)` : '';
-                    
-                    chartArea.innerHTML = `
-                        <div style="text-align: center;">
-                            <img src="${repo.graph.image_url}" 
-                                style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #4299e1;">
-                            <div style="margin-top: 15px; color: #a0aec0;">
-                                <p>${message}${ageInfo}</p>
-                                <p>Total: ${stats.total_commits} commits | Active: ${stats.active_days} days | Timeline: ${stats.timeline_days} days</p>
-                            </div>
-                        </div>
-                    `;
-                }
+            const chartArea = document.getElementById('chartArea');
+
+            if (repo.details && repo.details.ready) {
+                const stats = repo.details.stats;
+
+                document.getElementById('totalCommits').textContent = stats ? stats.total_commits : '0';
+                document.getElementById('activeDays').textContent = stats ? stats.active_days : '0';
+                document.getElementById('avgCommitsPerDay').textContent = stats ? stats.avg_commits_per_day : '0';
+                document.getElementById('lastCommitDate').textContent = (stats && stats.last_commit_date) || 'N/A';
+
+                chartArea.innerHTML = `
+                    <div style="max-height: 500px; overflow-y: auto; text-align: left; background: #0f1420; padding: 16px; border-radius: 8px; border: 1px solid #2d3748; color: #e2e8f0; line-height: 1.5;">
+                        ${renderReadme(repo.details.readme)}
+                    </div>
+                `;
+            } else {
+                document.getElementById('totalCommits').textContent = '0';
+                document.getElementById('activeDays').textContent = '0';
+                document.getElementById('avgCommitsPerDay').textContent = '0';
+                document.getElementById('lastCommitDate').textContent = 'N/A';
+                chartArea.innerHTML = '<div class="loading-message">Details unavailable for this repository.</div>';
             }
         }
 

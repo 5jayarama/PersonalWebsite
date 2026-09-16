@@ -1,25 +1,13 @@
 import os
 import json
-import math
 import time
 import threading
 import resend
 from datetime import datetime, timedelta, timezone
 import requests
-import pandas as pd
-from dateutil.relativedelta import relativedelta
-import calendar
 from dotenv import load_dotenv
-from flask import Flask, jsonify, send_from_directory, send_file, request
+from flask import Flask, jsonify, send_file, request
 from flask_cors import CORS
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib.ticker import FuncFormatter
-import seaborn as sns
-import numpy as np
-from scipy.ndimage import gaussian_filter1d
 
 load_dotenv()
 
@@ -31,11 +19,11 @@ CONTACT_RECIPIENT = os.getenv('CONTACT_RECIPIENT')  # your email, where form sub
 CONTACT_FROM = os.getenv('CONTACT_FROM', 'onboarding@resend.dev')  # sender address (see note below)
 
 if os.environ.get('RENDER'):
-    GRAPHS_FOLDER = '/opt/render/project/src/static/graphs'
+    REPO_DATA_FOLDER = '/opt/render/project/src/static/repo_data'
 else:
-    GRAPHS_FOLDER = os.path.join('static', 'graphs')
+    REPO_DATA_FOLDER = os.path.join('static', 'repo_data')
 
-os.makedirs(GRAPHS_FOLDER, exist_ok=True)
+os.makedirs(REPO_DATA_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
 CORS(app)
@@ -91,224 +79,98 @@ def fetch_commits(repo_name, per_page=100):
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 300  # Cache static files for 5 minutes
 app.config['JSON_SORT_KEYS'] = False  # Preserve JSON key order
 
-def process_commit_data(commit_dates):
-    """Convert commit dates to daily counts with actual dates.
+def format_date(date_obj):
+    """Format a date/datetime as M/D/YY without a leading zero on month/day."""
+    try:
+        return date_obj.strftime('%-m/%-d/%y')
+    except ValueError:
+        try:
+            return date_obj.strftime('%#m/%#d/%y')
+        except ValueError:
+            formatted = date_obj.strftime('%m/%d/%y')
+            return formatted.lstrip('0').replace('/0', '/')
 
-    Returns (x_dates, y, last_commit_date) where last_commit_date is the
-    date of the most recent actual commit (not today's date), used for
-    accurate "Last Commit" reporting.
+def compute_commit_stats(commit_dates):
+    """Summarize commit activity for a repository (no graph/image involved).
+
+    Returns a dict of stats, or None if there are no commits.
     """
     if not commit_dates:
-        return [], [], None
+        return None
 
-    # Parse dates
     dates = [datetime.fromisoformat(date.replace('Z', '+00:00')) for date in commit_dates]
     dates.sort()
 
     first_date = dates[0].date()
-    last_commit_date = dates[-1].date()  # actual last commit date
+    last_commit_date = dates[-1].date()
     today = datetime.now(timezone.utc).date()
 
-    print(f"Timeline: {first_date} to {today} (last actual commit: {last_commit_date})")
+    timeline_days = (today - first_date).days + 1
+    active_day_set = {d.date() for d in dates}
+    active_days = len(active_day_set)
+    total_commits = len(dates)
+    avg_commits_per_day = round(total_commits / active_days, 1) if active_days > 0 else 0
 
-    # Generate timeline from first commit to today (so the graph shows the
-    # trailing flat line up to the present, even if the repo went quiet)
-    timeline = pd.date_range(start=first_date, end=today, freq='D')
-
-    # Count commits per day
-    commit_counts = {}
-    for date in dates:
-        day = date.date()
-        commit_counts[day] = commit_counts.get(day, 0) + 1
-
-    # Create date-based x, y data
-    x_dates = []  # Actual dates
-    y = []        # Commits per day
-
-    for date in timeline:
-        day_date = date.date()
-        commits = commit_counts.get(day_date, 0)
-        x_dates.append(date.to_pydatetime())  # Convert to datetime for matplotlib
-        y.append(commits)
-
-    print(f"Timeline: {len(timeline)} days from first commit to today")
-    print(f"Total commits: {sum(y)}, Active days: {sum(1 for c in y if c > 0)}")
-
-    return x_dates, y, last_commit_date
-
-def create_commit_graph(repo_name, save_path):
-    """Create seaborn regplot with dates on x-axis and LOWESS smoothing"""
-    # Fetch and process commit data
-    print(f"Starting graph creation for {repo_name}...")
-    commit_dates = fetch_commits(repo_name)
-    if not commit_dates:
-        print(f"No commits found for {repo_name}")
-        return None
-
-    x_dates, y, last_commit_date = process_commit_data(commit_dates)
-    if not x_dates or not y:
-        print(f"Failed to process commit data for {repo_name}")
-        return None
-
-    print(f"Timeline data ready for {repo_name}: {len(x_dates)} data points")
-
-    # Calculate statistics
-    total_commits, active_days, timeline_length = sum(y), sum(1 for c in y if c > 0), len(x_dates)
-    baseline = 0.1 if timeline_length > 400 else 0.05 if timeline_length > 200 else 0.01 + (timeline_length // 100) * 0.01
-
-    # Create plot
-    plt.figure(figsize=(12, 6), facecolor='white')
-    ax = plt.gca()
-    sns.set_style("darkgrid")
-
-    # Scatter points and smoothed curve
-    plt.scatter(x_dates, y, color='blue', alpha=0.9, s=60, edgecolors='white', linewidth=2, zorder=3)
-
-    # Create and apply smoothing
-    y_smooth = np.full_like(y, baseline, dtype=float)
-    for i in range(len(y)):
-        if y[i] > 0:
-            y_smooth[i] = max(baseline, y[i])
-
-    y_smooth = gaussian_filter1d(y_smooth, sigma=0.8)
-    y_smooth = np.maximum(y_smooth, baseline)
-
-    for i in range(len(y)):
-        if y[i] > 0:
-            y_smooth[i] = max(y_smooth[i], y[i] * 0.8, baseline * 3)
-
-    y_final = np.maximum(gaussian_filter1d(y_smooth, sigma=0.4), baseline)
-    plt.plot(x_dates, y_final, color='red', linewidth=4, alpha=1.0, zorder=2)
-
-    # Set axis limits
-    max_val = max(max(y) if y else 1, max(y_final) if len(y_final) > 0 else 1)
-    plt.ylim(-0.05, max_val * 1.05)
-    plt.xlim(x_dates[0], x_dates[-1])
-
-    # Date formatter
-    def date_formatter(x, pos):
-        try:
-            date = mdates.num2date(x)
-            return date.strftime('%-m/%-d/%y')
-        except:
-            try:
-                return date.strftime('%#m/%#d/%y')
-            except:
-                return date.strftime('%m/%d/%y').lstrip('0').replace('/0', '/')
-
-    ax.xaxis.set_major_formatter(FuncFormatter(date_formatter))
-
-    # Smart tick placement
-    first_commit_date, last_date = x_dates[0], x_dates[-1]
-    tick_positions = [first_commit_date]
-
-    if timeline_length <= 30:
-        # Short projects: every timeline_length/5 days
-        interval_days = math.ceil(timeline_length / 5)
-        current_date = first_commit_date
-        while current_date <= last_date:
-            tick_positions.append(current_date)
-            current_date += timedelta(days=interval_days)
-    elif timeline_length <= 90:
-        # 1-3 months: first, middle, end of months
-        current_date = first_commit_date
-        next_month = current_date.replace(day=1) + relativedelta(months=1) if current_date.day > 1 else current_date
-
-        while next_month <= last_date:
-            tick_positions.append(next_month)  # First of month
-            days_in_month = calendar.monthrange(next_month.year, next_month.month)[1]
-            middle_date = next_month.replace(day=days_in_month // 2)
-            end_date_tick = next_month.replace(day=days_in_month)
-
-            if middle_date <= last_date and (30 > timeline_length or abs((last_date - middle_date).days) > 10):
-                tick_positions.append(middle_date)
-            if end_date_tick <= last_date and (30 > timeline_length or abs((last_date - end_date_tick).days) > 10):
-                tick_positions.append(end_date_tick)
-
-            next_month += relativedelta(months=1)
-    else:
-        # 3+ months: monthly (first of each month)
-        next_month = first_commit_date.replace(day=1) + relativedelta(months=1) if first_commit_date.day > 1 else first_commit_date
-        monthly_dates = []
-        while next_month <= last_date:
-            monthly_dates.append(next_month)
-            next_month += relativedelta(months=1)
-
-        # Filter out recent months if too close to end date
-        if timeline_length <= 180:
-            tick_positions.extend([d for d in monthly_dates if abs((last_date - d).days) > 10])
-        else:
-            tick_positions.extend(monthly_dates[:-1])  # Remove most recent month
-
-    # Add final date if not included
-    if tick_positions[-1] != last_date:
-        tick_positions.append(last_date)
-
-    # Set ticks and labels
-    ax.set_xticks(sorted(list(set(tick_positions))))
-    plt.xticks(rotation=0, ha='center')
-
-    # Timeline description
-    if timeline_length <= 7:
-        timeline_desc = f"({timeline_length} days)"
-    elif timeline_length <= 60:
-        timeline_desc = f"({timeline_length} days, ~{timeline_length//7} weeks)"
-    else:
-        timeline_desc = f"({timeline_length} days, ~{timeline_length//30} months)"
-
-    # Labels and formatting
-    plt.title(f'Commit Timeline for {repo_name} {timeline_desc}', fontsize=16, fontweight='bold', pad=15)
-    plt.xlabel('Date', fontsize=12, labelpad=10)
-    plt.ylabel('Commits per day', fontsize=12, labelpad=10)
-
-    # Repository stats
-    avg_commits = total_commits / active_days if active_days > 0 else 0
-    density = active_days / timeline_length * 100 if timeline_length > 0 else 0
-
-    def format_date(date_obj):
-        try:
-            return date_obj.strftime('%-m/%-d/%y')
-        except:
-            try:
-                return date_obj.strftime('%#m/%#d/%y')
-            except:
-                formatted = date_obj.strftime('%m/%d/%y')
-                return formatted.lstrip('0').replace('/0', '/')
-
-    # Use the ACTUAL last commit date, not the graph's trailing timeline end
-    # (which extends to today even if the repo has gone quiet).
-    start_date = format_date(x_dates[0])
-    last_commit_dt = datetime.combine(last_commit_date, datetime.min.time())
-    last_commit_display = format_date(last_commit_dt)
-    # Timeline end (used only for the on-graph annotation, showing the full
-    # period plotted, which may extend past the last actual commit).
-    timeline_end_display = format_date(x_dates[-1])
-
-    plt.figtext(0.02, 0.02,
-               f'Total: {total_commits} commits | Active: {active_days}/{timeline_length} days ({density:.1f}%) | Last commit: {last_commit_display}',
-               fontsize=10, ha='left')
-
-    # Save and return
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.05,
-                facecolor='white', edgecolor='none', transparent=False)
-    plt.close()
-
-    print(f"Graph saved to {save_path}")
+    start_date_display = format_date(datetime.combine(first_date, datetime.min.time()))
+    last_commit_display = format_date(datetime.combine(last_commit_date, datetime.min.time()))
+    today_display = format_date(datetime.combine(today, datetime.min.time()))
 
     return {
         'total_commits': total_commits,
         'active_days': active_days,
-        'avg_commits_per_day': round(avg_commits, 1),
-        'timeline_days': len(x_dates),
-        'activity_density': round(density, 1),
-        'date_range': f"{start_date} to {timeline_end_display}",
+        'avg_commits_per_day': avg_commits_per_day,
+        'timeline_days': timeline_days,
+        'date_range': f"{start_date_display} to {today_display}",
         'last_commit_date': last_commit_display
     }
 
-def generate_all_graphs():
-    """Generate graphs for ALL repositories"""
-    print("Generating ALL repository graphs...")
+def fetch_readme(repo_name):
+    """Fetch a repository's README as raw markdown/text (or None if missing)."""
+    url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{repo_name}/readme"
+    headers = {**GITHUB_HEADERS, 'Accept': 'application/vnd.github.raw'}
+
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.text
+        elif response.status_code == 404:
+            print(f"No README found for {repo_name}")
+            return None
+        else:
+            print(f"Error fetching README for {repo_name}: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"Exception fetching README for {repo_name}: {e}")
+        return None
+
+def fetch_repo_data(repo_name):
+    """Fetch commit stats and README for a repository (no graph/image involved)."""
+    commit_dates = fetch_commits(repo_name)
+    stats = compute_commit_stats(commit_dates)
+    readme_content = fetch_readme(repo_name)
+    return {
+        'stats': stats,
+        'readme': readme_content
+    }
+
+def cache_repo_data(repo_name, save_path):
+    """Fetch a repository's stats + README and cache them to a JSON file."""
+    print(f"Fetching data for {repo_name}...")
+    data = fetch_repo_data(repo_name)
+
+    if data['stats'] is None and data['readme'] is None:
+        print(f"No data found for {repo_name}")
+        return None
+
+    with open(save_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+
+    print(f"Data cached for {repo_name}")
+    return data
+
+def generate_all_repo_data():
+    """Fetch and cache stats + README for ALL repositories"""
+    print("Fetching data for ALL repositories...")
 
     try:
         repos = fetch_repositories()
@@ -320,41 +182,37 @@ def generate_all_graphs():
 
         for i, repo in enumerate(repos, 1):
             repo_name = repo['name']
-            graph_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_commits.png")
-            stats_path = os.path.join(GRAPHS_FOLDER, f"{repo_name}_stats.json")
+            data_path = os.path.join(REPO_DATA_FOLDER, f"{repo_name}_data.json")
 
-            print(f"[{i}/{total_repos}] Generating graph for {repo_name}...")
+            print(f"[{i}/{total_repos}] Fetching data for {repo_name}...")
 
             try:
-                stats = create_commit_graph(repo_name, graph_path)
+                data = cache_repo_data(repo_name, data_path)
 
-                if stats:
-                    # Save stats alongside the graph
-                    with open(stats_path, 'w') as f:
-                        json.dump(stats, f, indent=2)
-                    print(f"[{i}/{total_repos}] Generated graph for {repo_name}")
+                if data is not None:
+                    print(f"[{i}/{total_repos}] Cached data for {repo_name}")
                     successful += 1
                 else:
-                    print(f"[{i}/{total_repos}] No commits found for {repo_name}")
+                    print(f"[{i}/{total_repos}] No data found for {repo_name}")
                     failed += 1
 
             except Exception as e:
-                print(f"[{i}/{total_repos}] Error generating {repo_name}: {e}")
+                print(f"[{i}/{total_repos}] Error fetching {repo_name}: {e}")
                 failed += 1
 
             # Small delay between requests to be nice to GitHub API
             if i < total_repos:
-                time.sleep(0.1)  # 100ms between graphs
+                time.sleep(0.1)  # 100ms between repos
 
-        print(f"Graph generation complete: {successful} successful, {failed} failed out of {total_repos} repositories")
+        print(f"Data fetch complete: {successful} successful, {failed} failed out of {total_repos} repositories")
         return successful
 
     except Exception as e:
-        print(f"Error in generate_all_graphs: {e}")
+        print(f"Error in generate_all_repo_data: {e}")
         return 0
 
-def hourly_graph_refresh():
-    print("Starting background graph generation system...")
+def hourly_repo_data_refresh():
+    print("Starting background repo data refresh system...")
     print(f"Server timezone: {datetime.now()}")
     print(f"UTC time: {datetime.now(timezone.utc)}")
 
@@ -363,25 +221,25 @@ def hourly_graph_refresh():
             print(f"Waiting 1 hour for next refresh... (next update at {(datetime.now() + timedelta(hours=1)).strftime('%H:%M:%S')})")
             time.sleep(3600)
 
-            print("HOURLY REFRESH: Regenerating all graphs...")
+            print("HOURLY REFRESH: Refreshing all repository data...")
             print(f"Current time: {datetime.now()}")
-            successful = generate_all_graphs()
+            successful = generate_all_repo_data()
 
             if successful > 0:
-                print(f"Hourly refresh completed successfully ({successful} graphs updated)")
+                print(f"Hourly refresh completed successfully ({successful} repos updated)")
             else:
-                print("Hourly refresh completed but no graphs were generated")
+                print("Hourly refresh completed but no repo data was generated")
 
         except Exception as e:
             print(f"Error in hourly refresh cycle: {e}")
             # Continue the loop even if there's an error
             time.sleep(60)  # Wait 1 minute before retrying
 
-def start_background_graph_system():
-    """Start the background graph generation system"""
-    refresh_thread = threading.Thread(target=hourly_graph_refresh, daemon=True)
+def start_background_repo_data_system():
+    """Start the background repo data refresh system"""
+    refresh_thread = threading.Thread(target=hourly_repo_data_refresh, daemon=True)
     refresh_thread.start()
-    print("Background graph system started - generating all graphs every hour")
+    print("Background repo data system started - refreshing all repo data every hour")
 
 # FLASK ROUTES
 @app.route('/')
@@ -395,7 +253,7 @@ def serve_styles():
 
 @app.route('/api/repositories')
 def get_repositories():
-    """Get list of repositories with preloaded graph info"""
+    """Get list of repositories with preloaded stats + README info"""
     try:
         repos = fetch_repositories()
         total_repos = len(repos)
@@ -403,37 +261,33 @@ def get_repositories():
         repo_data = []
         for repo in repos:
             repo_name = repo['name']
-            graph_filename = f"{repo_name}_commits.png"
-            graph_path = os.path.join(GRAPHS_FOLDER, graph_filename)
-            stats_filename = f"{repo_name}_stats.json"
-            stats_path = os.path.join(GRAPHS_FOLDER, stats_filename)
+            data_filename = f"{repo_name}_data.json"
+            data_path = os.path.join(REPO_DATA_FOLDER, data_filename)
 
-            # Check if BOTH graph and stats files exist
-            graph_info = None
-            if os.path.exists(graph_path) and os.path.exists(stats_path):
+            details = None
+            if os.path.exists(data_path):
                 try:
                     # Check file age (for display purposes)
-                    file_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(graph_path))
+                    file_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(data_path))
                     age_minutes = int(file_age.total_seconds() / 60)
 
-                    # Load stats
-                    with open(stats_path, 'r') as f:
-                        stats = json.load(f)
+                    with open(data_path, 'r', encoding='utf-8') as f:
+                        cached = json.load(f)
 
-                    graph_info = {
-                        'image_url': f"/static/graphs/{graph_filename}",
-                        'stats': stats,
+                    details = {
+                        'stats': cached.get('stats'),
+                        'readme': cached.get('readme'),
                         'ready': True,
                         'age_minutes': age_minutes
                     }
-                    print(f"Preloaded graph available for {repo_name} (age: {age_minutes}m)")
+                    print(f"Preloaded data available for {repo_name} (age: {age_minutes}m)")
 
                 except Exception as e:
                     print(f"Error loading cached data for {repo_name}: {e}")
-                    graph_info = {'ready': False, 'reason': 'corrupted'}
+                    details = {'ready': False, 'reason': 'corrupted'}
             else:
-                print(f"No preloaded graph for {repo_name}")
-                graph_info = {'ready': False, 'reason': 'missing'}
+                print(f"No preloaded data for {repo_name}")
+                details = {'ready': False, 'reason': 'missing'}
 
             repo_data.append({
                 'name': repo['name'],
@@ -443,16 +297,16 @@ def get_repositories():
                 'language': repo['language'],
                 'updated_at': repo['updated_at'],
                 'html_url': repo['html_url'],
-                'graph': graph_info
+                'details': details
             })
 
-        ready_count = sum(1 for repo in repo_data if repo['graph']['ready'])
-        print(f"Repository API called: {ready_count}/{total_repos} graphs ready")
+        ready_count = sum(1 for repo in repo_data if repo['details']['ready'])
+        print(f"Repository API called: {ready_count}/{total_repos} repo data ready")
 
         return jsonify({
             "status": "success",
             "repositories": repo_data,
-            "graphs_ready": ready_count,
+            "data_ready": ready_count,
             "total_repos": len(repo_data)
         })
 
@@ -461,119 +315,6 @@ def get_repositories():
             "status": "error",
             "message": str(e)
         }), 500
-
-@app.route('/api/generate_graph/<repo_name>')
-def generate_graph(repo_name):
-    """Generate commit graph for a specific repository (with caching)"""
-    try:
-        graph_filename = f"{repo_name}_commits.png"
-        graph_path = os.path.join(GRAPHS_FOLDER, graph_filename)
-        stats_filename = f"{repo_name}_stats.json"
-        stats_path = os.path.join(GRAPHS_FOLDER, stats_filename)
-
-        # Check if both graph and stats files exist
-        if os.path.exists(graph_path) and os.path.exists(stats_path):
-            print(f"Using cached graph and stats for {repo_name}")
-
-            # Load cached stats
-            try:
-                with open(stats_path, 'r') as f:
-                    stats = json.load(f)
-
-                return jsonify({
-                    "status": "success",
-                    "image_url": f"/static/graphs/{graph_filename}",
-                    "stats": stats,
-                    "cached": True
-                })
-            except json.JSONDecodeError:
-                print(f"Corrupted stats file for {repo_name}, regenerating...")
-                # Falls through to regeneration
-
-        # Generate new graph if it doesn't exist or stats are corrupted
-        print(f"Generating new graph for {repo_name}")
-        stats = create_commit_graph(repo_name, graph_path)
-
-        if stats is not None:
-            # Save stats alongside the image
-            with open(stats_path, 'w') as f:
-                json.dump(stats, f, indent=2)
-
-            return jsonify({
-                "status": "success",
-                "image_url": f"/static/graphs/{graph_filename}",
-                "stats": stats,
-                "cached": False
-            })
-        else:
-            return jsonify({
-                "status": "error",
-                "message": "No commits found or error generating graph"
-            }), 404
-
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
-@app.route('/api/generate_top_graphs/<int:top_n>')
-def generate_top_graphs(top_n=3):
-    """Generate graphs for top N repositories"""
-    try:
-        # Get repositories and their commit counts
-        repos = fetch_repositories()
-        repo_data = []
-
-        for repo in repos[:top_n * 2]:  # Fetch extra in case some have no commits
-            commits = fetch_commits(repo['name'])
-            if commits:
-                x_dates, y, _ = process_commit_data(commits)
-                total_commits = sum(y) if y else 0
-                repo_data.append({
-                    'name': repo['name'],
-                    'commits': total_commits,
-                    'repo_info': repo
-                })
-
-        # Sort by commit count and take top N
-        repo_data.sort(key=lambda x: x['commits'], reverse=True)
-        top_repos = repo_data[:top_n]
-
-        # Generate individual graphs for each top repo
-        results = []
-        for repo_info in top_repos:
-            repo_name = repo_info['name']
-            graph_filename = f"{repo_name}_commits.png"
-            graph_path = os.path.join(GRAPHS_FOLDER, graph_filename)
-
-            # Create individual graph
-            stats = create_commit_graph(repo_name, graph_path)
-
-            if stats:
-                results.append({
-                    "repo_name": repo_name,
-                    "image_url": f"/static/graphs/{graph_filename}",
-                    "total_commits": stats['total_commits'],
-                    "description": repo_info['repo_info']['description'],
-                    "date_range": stats.get('date_range', 'N/A')
-                })
-
-        return jsonify({
-            "status": "success",
-            "graphs": results
-        })
-
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
-@app.route('/static/graphs/<filename>')
-def serve_graph(filename):
-    """Serve generated graph images"""
-    return send_from_directory(GRAPHS_FOLDER, filename)
 
 @app.route('/api/contact', methods=['POST'])
 def contact():
@@ -629,17 +370,17 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "graphs_folder": GRAPHS_FOLDER
+        "repo_data_folder": REPO_DATA_FOLDER
     })
 
 
-print("Starting GitHub Graphs Server...")
-# PRE-BUILD: Generate all graphs FIRST
-print("Pre-building all graphs before starting server...")
-successful = generate_all_graphs()
-print(f"Pre-build complete: {successful} graphs generated")
+print("Starting GitHub Projects Server...")
+# PRE-BUILD: Fetch all repo data (stats + READMEs) FIRST
+print("Pre-fetching all repository data before starting server...")
+successful = generate_all_repo_data()
+print(f"Pre-fetch complete: {successful} repos processed")
 # Start background system BEFORE app.run()
-start_background_graph_system()
+start_background_repo_data_system()
 if __name__ == '__main__':
     # Start Flask app (this blocks, so put it last)
     port = int(os.environ.get("PORT", 5000))

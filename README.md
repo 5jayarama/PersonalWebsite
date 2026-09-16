@@ -17,7 +17,6 @@ About Me
 
 Skills
 - List of my most notable skills
-- Skill bars for languages showing competency levels (estimated)
 - Descriptions of my experiences with each skill/technology
 - A list of the projects organized under each respective language. This contains both manual entries (private/off-GitHub projects) and live data fetched from my github public portfolio. 
 
@@ -28,15 +27,16 @@ Projects
 
 Contact Me
 - An encouragement message at the top to connect to my linkedin.
-- Some functionality to send a message to my spreadsheet. 
+- Some functionality to send a message to my email.
 - Same links as my home page for user convenience.
 
 Note: The github data is fetched every hour to avoid burning through github's fetch token allowance. The graph is updated every time new data is fetched(every hour as well).
 
-index.html: The main website.
-server.py: The graph generation. Uses flask to communicate with the frontend.
+index.html: The website frontend.
+server.py: The python backend. Uses flask to communicate with the frontend.
 requirements.txt: A support file for render.
 render.yaml: A file telling render how to run the website; needed since there is a backend.
 .gitignore: ignores the graphs, the .env, and the pycache when committing.
+styles.css: for styling the website
 
 For secure practices, the github token is stashed in the .env file

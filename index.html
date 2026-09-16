@@ -439,9 +439,11 @@
             <!-- This is the code for the Projects page -->
             <div id="projectsContent" class="hidden">
                 <div class="projects-description">
-                    Here's a live-fetched list of my public GitHub repositories, along with each one's README. 
-                    Projects that are hosted live are grouped separately below. Click any project to view it on 
-                    GitHub in more detail.
+                    Here's a live-fetched list of my public GitHub repositories. Recently I have been 
+                    hosting some of my projects live. This means that you can click a link and see the 
+                    project in action rather than having to download the project and run it yourself. If 
+                    any of these projects interest you, feel free to view any of my projects in Github 
+                    to see the actual code and architecture of the project.
                 </div>
                 
                 <div class="chart-container">
@@ -455,7 +457,7 @@
                         </div>
                         <div class="project-links">
                             <a id="projectGithubLink" href="#" target="_blank" class="project-link">View on GitHub</a>
-                            <a id="projectLiveLink" href="#" target="_blank" class="project-link" style="display: none;">🟢 Hosted Live</a>
+                            <a id="projectLiveLink" href="#" target="_blank" class="project-link" style="display: none;">Hosted Live</a>
                         </div>
 
                         <div class="commit-summary">
@@ -715,9 +717,9 @@
         // Returns the URL if found, otherwise null.
         function detectLiveUrl(readmeText) {
             if (!readmeText) return null;
-            const match = readmeText.match(/\blive\b[\s\S]{0,80}?(https?:\/\/[^\s)"'<>\]]+)/i);
+            const match = readmeText.match(/\blive\b[\s\S]{0,80}?(https?:\/\/[^\s)"'<>\]*]+)/i);
             if (!match) return null;
-            return match[1].replace(/[.,;:)]+$/, '');
+            return match[1].replace(/[.,;:)*_]+$/, '');
         }
 
         // Minimal markdown -> HTML renderer for displaying READMEs inline.
@@ -798,7 +800,7 @@
 
             let tabsHTML = '';
             if (liveRepos.length > 0) {
-                tabsHTML += `<div style="width: 100%; color: #a0aec0; font-size: 0.85em; margin: 4px 0 2px;">🟢 Hosted Live</div>`;
+                tabsHTML += `<div style="width: 100%; color: #a0aec0; font-size: 0.85em; margin: 4px 0 2px;">Hosted Live</div>`;
                 tabsHTML += liveRepos.map(repo =>
                     `<div class="repo-tab" data-repo-index="${displayedRepos.indexOf(repo)}">${repo.name}</div>`
                 ).join('');

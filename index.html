@@ -456,8 +456,8 @@
                             <div id="projectDescription" class="project-description">No description available</div>
                         </div>
                         <div class="project-links">
-                            <a id="projectGithubLink" href="#" target="_blank" class="project-link">View on GitHub</a>
                             <a id="projectLiveLink" href="#" target="_blank" class="project-link" style="display: none;">Hosted Live</a>
+                            <a id="projectGithubLink" href="#" target="_blank" class="project-link">View on GitHub</a>
                         </div>
 
                         <div class="commit-summary">
@@ -844,13 +844,13 @@
 
             let tabsHTML = '';
             if (liveRepos.length > 0) {
-                tabsHTML += `<div style="width: 100%; color: #fff; font-size: 0.85em; margin: 4px 0 2px;">Hosted Live</div>`;
+                tabsHTML += `<div style="width: 100%; color: #fff; font-size: 18px; margin: 4px 0 2px;">Hosted Live</div>`;
                 tabsHTML += liveRepos.map(repo =>
                     `<div class="repo-tab" data-repo-index="${displayedRepos.indexOf(repo)}">${repo.name}</div>`
                 ).join('');
             }
             if (otherRepos.length > 0) {
-                tabsHTML += `<div style="width: 100%; color: #fff; font-size: 0.85em; margin: 10px 0 2px;">Not Hosted Live</div>`;
+                tabsHTML += `<div style="width: 100%; color: #fff; font-size: 18px; margin: 10px 0 2px;">Not Hosted Live</div>`;
                 tabsHTML += otherRepos.map(repo =>
                     `<div class="repo-tab" data-repo-index="${displayedRepos.indexOf(repo)}">${repo.name}</div>`
                 ).join('');

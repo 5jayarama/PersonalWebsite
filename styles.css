@@ -468,10 +468,10 @@ body.light-mode .social-link:hover .social-icon {
 
 .chart-title {
     color: #fff;
-    font-size: 24px;
+    font-size: 16px;
     font-weight: 600;
     margin-bottom: 20px;
-    text-align: center;
+    text-align: left;
 }
 
 .chart-canvas {
@@ -505,7 +505,7 @@ body.light-mode .social-link:hover .social-icon {
     background-color: #3a3a5c;
     color: #fff;
     padding: 10px 16px;
-    border-radius: 6px 6px 0 0;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
@@ -540,14 +540,14 @@ body.light-mode .social-link:hover .social-icon {
 
 .project-name {
     color: #4299e1;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 600;
     margin-bottom: 5px;
 }
 
 .project-description {
     color: #fff;
-    font-size: 14px;
+    font-size: 16px;
     margin-bottom: 10px;
 }
 

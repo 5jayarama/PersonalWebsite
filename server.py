@@ -297,6 +297,7 @@ def get_repositories():
                 'language': repo['language'],
                 'updated_at': repo['updated_at'],
                 'html_url': repo['html_url'],
+                'default_branch': repo.get('default_branch', 'main'),
                 'details': details
             })
 
